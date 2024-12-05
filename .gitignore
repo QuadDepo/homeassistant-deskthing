@@ -1,0 +1,18 @@
+# dependencies
+/node_modules
+
+# production
+/output
+/dist
+
+# misc
+.DS_Store
+*.pem
+
+# logs
+npm-debug.log*
+logs
+*.log
+
+# env files
+.env

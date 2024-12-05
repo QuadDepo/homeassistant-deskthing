@@ -1,0 +1,18 @@
+{
+	"id": "homeassistant-app",
+	"isAudioSource": false,
+	"isScreenSaver": false,
+	"isWebApp": true,
+	"isLocalApp": false,
+	"requires": [],
+	"label": "HomeAssistant",
+	"version": "0.9.1",
+	"version_code": "1.0",
+	"compatible_server": ["9"],
+	"compatible_client": ["9"],
+	"description": "Control Home Assistant from your DeskThing",
+	"author": "Ryan George",
+	"platforms": ["linux", "windows", "mac"],
+	"homepage": "",
+	"repository": ""
+}
