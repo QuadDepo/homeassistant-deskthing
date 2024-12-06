@@ -1,23 +1,58 @@
 // Doing this is required in order for the server to link with DeskThing
-import { DeskThing as DK, SettingsString } from "deskthing-server";
-import { homeAssistant } from "./ha-connection";
+import {
+	DataInterface,
+	DeskThing as DK,
+	SettingsMultiSelect,
+	SettingsString,
+} from "deskthing-server";
+import { createActor } from "xstate";
+import { haStateMachine } from "./homeAssistantMachine";
 const DeskThing = DK.getInstance();
 export { DeskThing };
+
+const getSettings = (data: DataInterface | null) => {
+	const url = (data?.settings?.url as SettingsString)?.value || "";
+	const token = (data?.settings?.token as SettingsString)?.value || "";
+	const entities =
+		(data?.settings?.entities as SettingsMultiSelect)?.value || [];
+
+	return {
+		url,
+		token,
+		entities,
+	};
+};
 
 const start = async () => {
 	let Data = await DeskThing.getData();
 
+	DeskThing.sendLog("[HA] Starting HomeAssistant");
+
+	const { url, token, entities } = getSettings(Data);
+
+	const homeassistantActor = createActor(haStateMachine, {
+		input: {
+			url,
+			token,
+			entities,
+		},
+	}).start();
+
+	DeskThing.on("data", (newData) => {
+		Data = newData;
+		if (Data) {
+			const { url, token, entities } = getSettings(Data);
+			homeassistantActor.send({
+				type: "UPDATE_SETTINGS",
+				url,
+				token,
+				entities,
+			});
+		}
+	});
+
 	if (!Data?.settings?.url || !Data?.settings?.token) {
 		setupSettings();
-	} else {
-		try {
-			await homeAssistant.connect({
-				url: Data.settings.url.value as string,
-				token: Data.settings.token.value as string,
-			});
-		} catch (err) {
-			DeskThing.sendLog(`Failed to connect: ${err}`);
-		}
 	}
 };
 
@@ -40,9 +75,7 @@ const setupSettings = async () => {
 	});
 };
 
-const stop = async () => {
-	homeAssistant.disconnect();
-};
+const stop = async () => {};
 
 // Main Entrypoint of the server
 DeskThing.on("start", start);
