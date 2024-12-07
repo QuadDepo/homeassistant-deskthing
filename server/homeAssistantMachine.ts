@@ -1,7 +1,7 @@
 import { type Connection, type HassEntity } from "home-assistant-js-websocket";
 import { SettingsMultiSelect } from "deskthing-server";
 import { assign, fromPromise, setup } from "xstate";
-import { fetchAllEntities } from "./utils/fetchAllEntities";
+import { getHomeAssistantStates } from "./utils/getHomeAssistantStates";
 import { DeskThing } from ".";
 import websocketMachine from "./websocketMachine";
 
@@ -12,7 +12,7 @@ const getAllEntities = fromPromise<
 		token: string;
 	}
 >(({ input: { url, token } }) => {
-	return fetchAllEntities(url, token);
+	return getHomeAssistantStates(url, token);
 });
 
 const createEntitySetting = (

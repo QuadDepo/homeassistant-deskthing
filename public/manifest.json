@@ -1,11 +1,11 @@
 {
-	"id": "homeassistant-app",
+	"id": "homeassistant",
 	"isAudioSource": false,
 	"isScreenSaver": false,
 	"isWebApp": true,
 	"isLocalApp": false,
 	"requires": [],
-	"label": "HomeAssistant",
+	"label": "homeassistant",
 	"version": "0.9.1",
 	"version_code": "1.0",
 	"compatible_server": ["9"],

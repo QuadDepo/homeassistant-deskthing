@@ -1,20 +1,21 @@
 // Doing this is required in order for the server to link with DeskThing
 import {
-	DataInterface,
+	AppSettings,
 	DeskThing as DK,
 	SettingsMultiSelect,
 	SettingsString,
+	SocketData,
 } from "deskthing-server";
 import { createActor } from "xstate";
 import { haStateMachine } from "./homeAssistantMachine";
+import { getHomeAssistantStates } from "./utils/getHomeAssistantStates";
 const DeskThing = DK.getInstance();
 export { DeskThing };
 
-const getSettings = (data: DataInterface | null) => {
-	const url = (data?.settings?.url as SettingsString)?.value || "";
-	const token = (data?.settings?.token as SettingsString)?.value || "";
-	const entities =
-		(data?.settings?.entities as SettingsMultiSelect)?.value || [];
+const normalizeSettings = (settings?: AppSettings | null) => {
+	const url = (settings?.url as SettingsString)?.value || "";
+	const token = (settings?.token as SettingsString)?.value || "";
+	const entities = (settings?.entities as SettingsMultiSelect)?.value || [];
 
 	return {
 		url,
@@ -28,7 +29,7 @@ const start = async () => {
 
 	DeskThing.sendLog("[HA] Starting HomeAssistant");
 
-	const { url, token, entities } = getSettings(Data);
+	const { url, token, entities } = normalizeSettings(Data?.settings);
 
 	const homeassistantActor = createActor(haStateMachine, {
 		input: {
@@ -38,10 +39,43 @@ const start = async () => {
 		},
 	}).start();
 
+	// TODO: Check if we can move this logic to the Home Assistant Machine
+	DeskThing.on("get", async (socket: SocketData) => {
+		switch (socket.request) {
+			case "initial_entities":
+				const settings = await DeskThing.getSettings();
+
+				const { entities, token, url } = normalizeSettings(settings);
+
+				if (entities) {
+					const res = await Promise.all(
+						entities.map((id) => {
+							return getHomeAssistantStates(url, token, id);
+						})
+					);
+
+					const result = res.reduce((acc, [item]) => {
+						acc[item.entity_id] = item;
+						return acc;
+					}, {});
+
+					DeskThing.sendDataToClient({
+						type: "homeassistant_data",
+						payload: result,
+					});
+				}
+				break;
+			default:
+				DeskThing.sendLog(
+					`[HA] Unknown get request from client ${socket.request}`
+				);
+		}
+	});
+
 	DeskThing.on("data", (newData) => {
 		Data = newData;
 		if (Data) {
-			const { url, token, entities } = getSettings(Data);
+			const { url, token, entities } = normalizeSettings(Data.settings);
 			homeassistantActor.send({
 				type: "UPDATE_SETTINGS",
 				url,
