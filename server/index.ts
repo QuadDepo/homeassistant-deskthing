@@ -39,6 +39,39 @@ const start = async () => {
 		},
 	}).start();
 
+	// TODO: Check if we can move this logic to the Home Assistant Machine
+	DeskThing.on("get", async (socket: SocketData) => {
+		switch (socket.request) {
+			case "initial_entities":
+				const settings = await DeskThing.getSettings();
+
+				const { entities, token, url } = normalizeSettings(settings);
+
+				if (entities) {
+					const res = await Promise.all(
+						entities.map((id) => {
+							return getHomeAssistantStates(url, token, id);
+						})
+					);
+
+					const result = res.reduce((acc, [item]) => {
+						acc[item.entity_id] = item;
+						return acc;
+					}, {});
+
+					DeskThing.sendDataToClient({
+						type: "homeassistant_data",
+						payload: result,
+					});
+				}
+				break;
+			default:
+				DeskThing.sendLog(
+					`[HA] Unknown get request from client ${socket.request}`
+				);
+		}
+	});
+
 	DeskThing.on("data", (newData) => {
 		Data = newData;
 		if (Data) {
