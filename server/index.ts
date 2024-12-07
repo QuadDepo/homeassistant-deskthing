@@ -7,6 +7,7 @@ import {
 } from "deskthing-server";
 import { createActor } from "xstate";
 import { haStateMachine } from "./homeAssistantMachine";
+import { getHomeAssistantStates } from "./utils/getHomeAssistantStates";
 const DeskThing = DK.getInstance();
 export { DeskThing };
 
