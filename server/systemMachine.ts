@@ -3,7 +3,10 @@ import { assign, EventObject, fromCallback, fromPromise, setup } from "xstate";
 import { getHomeAssistantStates } from "./utils/getHomeAssistantStates";
 import { DeskThing } from ".";
 import websocketMachine from "./websocketMachine";
-import createEntitySetting from "./utils/createEntitySetting";
+import {
+	createBasicSettings,
+	createEntitySetting,
+} from "./utils/createSettings";
 import { SocketData } from "deskthing-server";
 import { normalizeSettings } from "./utils/normalizeSettings";
 
@@ -81,6 +84,7 @@ export const systemMachine = setup({
 		},
 	},
 	actions: {
+		createBasicSettings,
 		forwardEventToClient: (_, params: { payload: Events }) => {
 			DeskThing.sendDataToClient({
 				type: "homeassistant",
@@ -147,10 +151,13 @@ export const systemMachine = setup({
 							},
 						},
 						{
-							actions: {
-								type: "sendEventToClient",
-								params: { event: createEvent("WAITING_FOR_SETTINGS") },
-							},
+							actions: [
+								"createBasicSettings",
+								{
+									type: "sendEventToClient",
+									params: { event: createEvent("WAITING_FOR_SETTINGS") },
+								},
+							],
 						},
 					],
 				},
