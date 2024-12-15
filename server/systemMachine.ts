@@ -1,9 +1,11 @@
 import { type Connection, type HassEntity } from "home-assistant-js-websocket";
-import { assign, fromPromise, setup } from "xstate";
+import { assign, EventObject, fromCallback, fromPromise, setup } from "xstate";
 import { getHomeAssistantStates } from "./utils/getHomeAssistantStates";
 import { DeskThing } from ".";
 import websocketMachine from "./websocketMachine";
 import createEntitySetting from "./utils/createEntitySetting";
+import { SocketData } from "deskthing-server";
+import { normalizeSettings } from "./utils/normalizeSettings";
 
 const getAllEntities = fromPromise<
 	HassEntity[],
@@ -13,6 +15,30 @@ const getAllEntities = fromPromise<
 	}
 >(({ input: { url, token } }) => {
 	return getHomeAssistantStates(url, token);
+});
+
+interface ClientEvent extends Omit<SocketData, "payload"> {
+	payload: Events;
+}
+
+const onDeskThingEvents = fromCallback<EventObject>(({ sendBack }) => {
+	DeskThing.on("data", (settings) => {
+		const { url, token, entities } = normalizeSettings(settings);
+		sendBack({
+			type: "UPDATE_SETTINGS",
+			url,
+			token,
+			entities,
+		});
+	});
+});
+
+const onClientEvents = fromCallback<EventObject>(({ sendBack }) => {
+	DeskThing.on("get", async (socket: ClientEvent) => {
+		sendBack({
+			...socket.payload,
+		});
+	});
 });
 
 function createEvent(type: Events["type"]): EventTypes {
@@ -73,6 +99,8 @@ export const systemMachine = setup({
 		hasEntities: ({ context }) => context.entities.length > 0,
 	},
 	actors: {
+		onDeskThingEvents,
+		onClientEvents,
 		getAllEntities,
 		websocket: websocketMachine,
 	},
@@ -95,6 +123,16 @@ export const systemMachine = setup({
 			reenter: true,
 		},
 	},
+	invoke: [
+		{
+			id: "onDeskThingEvents",
+			src: "onDeskThingEvents",
+		},
+		{
+			id: "onClientEvents",
+			src: "onClientEvents",
+		},
+	],
 	states: {
 		setup: {
 			initial: "config",
