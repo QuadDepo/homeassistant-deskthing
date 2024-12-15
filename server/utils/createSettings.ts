@@ -1,8 +1,8 @@
-import { SettingsMultiSelect } from "deskthing-server";
+import { SettingsMultiSelect, SettingsString } from "deskthing-server";
 import { DeskThing } from "..";
 import { HassEntity } from "home-assistant-js-websocket";
 
-const createEntitySetting = (
+export const createEntitySetting = (
 	entities: HassEntity[],
 	currentEntities: string[]
 ) => {
@@ -26,4 +26,21 @@ const createEntitySetting = (
 	});
 };
 
-export default createEntitySetting;
+export const createBasicSettings = () => {
+	const url: SettingsString = {
+		label: "Your HomeAssistant URL",
+		type: "string",
+		value: "http://homeassistant.local:8123",
+	};
+
+	const token: SettingsString = {
+		label: "HomeAssistant Long Lived Access Token",
+		type: "string",
+		value: "",
+	};
+
+	DeskThing.addSettings({
+		url,
+		token,
+	});
+};
