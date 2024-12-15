@@ -7,7 +7,7 @@ import {
 	SocketData,
 } from "deskthing-server";
 import { createActor } from "xstate";
-import { haStateMachine } from "./homeAssistantMachine";
+import { systemMachine } from "./systemMachine";
 import { getHomeAssistantStates } from "./utils/getHomeAssistantStates";
 const DeskThing = DK.getInstance();
 export { DeskThing };
@@ -31,7 +31,7 @@ const start = async () => {
 
 	const { url, token, entities } = normalizeSettings(Data?.settings);
 
-	const homeassistantActor = createActor(haStateMachine, {
+	const systemActor = createActor(systemMachine, {
 		input: {
 			url,
 			token,
@@ -76,7 +76,7 @@ const start = async () => {
 		Data = newData;
 		if (Data) {
 			const { url, token, entities } = normalizeSettings(Data.settings);
-			homeassistantActor.send({
+			systemActor.send({
 				type: "UPDATE_SETTINGS",
 				url,
 				token,
