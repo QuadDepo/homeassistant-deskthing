@@ -1,5 +1,12 @@
 import { type Connection, type HassEntity } from "home-assistant-js-websocket";
-import { assign, EventObject, fromCallback, fromPromise, setup } from "xstate";
+import {
+	assertEvent,
+	assign,
+	EventObject,
+	fromCallback,
+	fromPromise,
+	setup,
+} from "xstate";
 import { getHomeAssistantStates } from "./utils/getHomeAssistantStates";
 import { DeskThing } from ".";
 import websocketMachine from "./websocketMachine";
@@ -25,7 +32,7 @@ interface ClientEvent extends Omit<SocketData, "payload"> {
 }
 
 const onDeskThingEvents = fromCallback<EventObject>(({ sendBack }) => {
-	DeskThing.on("data", (settings) => {
+	DeskThing.on("data", ({ settings }) => {
 		const { url, token, entities } = normalizeSettings(settings);
 		sendBack({
 			type: "UPDATE_SETTINGS",
@@ -97,10 +104,23 @@ export const systemMachine = setup({
 				payload: params.event,
 			});
 		},
+		assignSettings: assign(({ context, event }) => {
+			assertEvent(event, "UPDATE_SETTINGS");
+			return {
+				...context,
+				token: event.token,
+				url: event.url,
+				entities: event.entities,
+			};
+		}),
 	},
 	guards: {
 		hasValidConfig: ({ context }) => Boolean(context.url && context.token),
 		hasEntities: ({ context }) => context.entities.length > 0,
+		hasTokenOrUrlChanged: ({ context, event }) => {
+			assertEvent(event, "UPDATE_SETTINGS");
+			return !(context.url === event.url && context.token === event.token);
+		},
 	},
 	actors: {
 		onDeskThingEvents,
@@ -117,16 +137,12 @@ export const systemMachine = setup({
 		connection: null,
 		error: null,
 	}),
-	initial: "setup",
-	entry: () => {
-		DeskThing.sendLog("[HA] Starting machine...");
-	},
-	on: {
-		UPDATE_SETTINGS: {
-			target: "setup",
-			reenter: true,
+	entry: [
+		"createBasicSettings",
+		() => {
+			DeskThing.sendLog("[HA] Starting machine...");
 		},
-	},
+	],
 	invoke: [
 		{
 			id: "onDeskThingEvents",
@@ -137,8 +153,16 @@ export const systemMachine = setup({
 			src: "onClientEvents",
 		},
 	],
+	initial: "initialize",
 	states: {
-		setup: {
+		initialize: {
+			on: {
+				UPDATE_SETTINGS: {
+					target: "initialize",
+					actions: "assignSettings",
+					reenter: true,
+				},
+			},
 			initial: "config",
 			states: {
 				config: {
@@ -152,7 +176,6 @@ export const systemMachine = setup({
 						},
 						{
 							actions: [
-								"createBasicSettings",
 								{
 									type: "sendEventToClient",
 									params: { event: createEvent("WAITING_FOR_SETTINGS") },
@@ -181,6 +204,7 @@ export const systemMachine = setup({
 									},
 								},
 								onDone: {
+									target: "done",
 									actions: [
 										({ context, event: { output } }) => {
 											createEntitySetting(output, context.entities);
@@ -224,6 +248,23 @@ export const systemMachine = setup({
 			entry: () => {
 				DeskThing.sendLog("[HA] Setting up WS connecting");
 			},
+			on: {
+				UPDATE_SETTINGS: [
+					{
+						guard: "hasTokenOrUrlChanged",
+						target: "#system.initialize",
+						actions: "assignSettings",
+						reenter: true,
+					},
+					{
+						guard: "hasValidConfig",
+						target: "#system.active",
+						actions: "assignSettings",
+						reenter: true,
+					},
+				],
+			},
+			initial: "idle",
 			states: {
 				idle: {
 					invoke: {
