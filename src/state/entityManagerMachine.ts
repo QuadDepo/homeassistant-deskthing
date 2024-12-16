@@ -62,7 +62,9 @@ const entityManagerMachine = setup({
 
 					// NOTE: If entity doesn't exist yet spawn new entity machine
 					if (!entityTarget) {
-						const spawnedEntity = spawn(entityMachine);
+						const spawnedEntity = spawn(entityMachine, {
+							input: entities[entityId],
+						});
 						refs[entityId] = spawnedEntity;
 						continue;
 					}
