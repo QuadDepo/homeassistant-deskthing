@@ -33,7 +33,7 @@ const websocket = fromCallback<
 		entities: string[];
 	}
 >(({ input: { connection, entities }, sendBack }) => {
-	subscribeEntities(
+	const unsubscribeEntities = subscribeEntities(
 		connection,
 		(ent) => {
 			sendBack({
@@ -43,6 +43,10 @@ const websocket = fromCallback<
 		},
 		entities
 	);
+
+	return () => {
+		unsubscribeEntities();
+	};
 });
 
 const websocketMachine = setup({
@@ -58,10 +62,18 @@ const websocketMachine = setup({
 			token: string;
 			entities: string[];
 		},
-		events: {} as {
-			type: "ENTITIES_UPDATED";
-			entities: HassEntities[];
-		},
+		events: {} as
+			| {
+					type: "UPDATE_SETTINGS";
+					entities: string[];
+			  }
+			| {
+					type: "CLIENT_CONNECTED";
+			  }
+			| {
+					type: "ENTITIES_UPDATED";
+					entities: HassEntities[];
+			  },
 	},
 	actors: {
 		getAuth,
@@ -84,10 +96,15 @@ const websocketMachine = setup({
 				}),
 				src: "getAuth",
 				onDone: {
-					actions: assign(({ context, event: { output } }) => ({
-						...context,
-						connection: output,
-					})),
+					actions: [
+						assign(({ context, event: { output } }) => ({
+							...context,
+							connection: output,
+						})),
+						() => {
+							DeskThing.sendLog("[HA] Connected");
+						},
+					],
 					target: "connected",
 				},
 				onError: {
@@ -101,6 +118,7 @@ const websocketMachine = setup({
 			},
 		},
 		connected: {
+			entry: () => DeskThing.sendLog("[HA] Subscribing to entities"),
 			invoke: {
 				input: ({ context: { connection, entities } }) => ({
 					// Why??
@@ -117,6 +135,10 @@ const websocketMachine = setup({
 							payload: event.entities,
 						});
 					},
+				},
+				CLIENT_CONNECTED: {
+					target: "connected",
+					reenter: true,
 				},
 			},
 		},
