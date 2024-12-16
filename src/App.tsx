@@ -5,6 +5,7 @@ import { useActorRef, useSelector } from "@xstate/react";
 import entityManagerMachine, {
 	EntityMachineActor,
 } from "./state/entityManagerMachine";
+import Startup from "./components/startup/Startup";
 
 const deskthing = DeskThing.getInstance();
 
@@ -46,6 +47,7 @@ const App: React.FC = () => {
 
 	return (
 		<div className="bg-slate-800 w-screen h-screen">
+			<Startup />
 			{entities.map(([entityId, actor]) => (
 				<Entity id={entityId} key={entityId} actor={actor} />
 			))}
