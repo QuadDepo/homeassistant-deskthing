@@ -62,10 +62,18 @@ const websocketMachine = setup({
 			token: string;
 			entities: string[];
 		},
-		events: {} as {
-			type: "ENTITIES_UPDATED";
-			entities: HassEntities[];
-		},
+		events: {} as
+			| {
+					type: "UPDATE_SETTINGS";
+					entities: string[];
+			  }
+			| {
+					type: "CLIENT_CONNECTED";
+			  }
+			| {
+					type: "ENTITIES_UPDATED";
+					entities: HassEntities[];
+			  },
 	},
 	actors: {
 		getAuth,
@@ -127,6 +135,10 @@ const websocketMachine = setup({
 							payload: event.entities,
 						});
 					},
+				},
+				CLIENT_CONNECTED: {
+					target: "connected",
+					reenter: true,
 				},
 			},
 		},
