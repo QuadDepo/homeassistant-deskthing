@@ -1,6 +1,7 @@
+import { DeskThing } from "deskthing-client";
 import { HassEntities, HassEntity } from "home-assistant-js-websocket";
 import { ActorRefFromLogic, assign, setup, SnapshotFrom } from "xstate";
-
+const deskthing = DeskThing.getInstance();
 // TODO: Create seperate file for this
 const entityMachine = setup({
 	types: {
@@ -42,6 +43,14 @@ const entityManagerMachine = setup({
 	id: "entityManager",
 	context: {
 		refs: {},
+	},
+	entry: () => {
+		deskthing.send({
+			type: "get",
+			payload: {
+				type: "CLIENT_CONNECTED",
+			},
+		});
 	},
 	on: {
 		ENTITIES_CHANGE: {
