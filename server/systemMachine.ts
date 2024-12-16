@@ -3,6 +3,7 @@ import {
 	assertEvent,
 	assign,
 	EventObject,
+	forwardTo,
 	fromCallback,
 	fromPromise,
 	setup,
@@ -70,6 +71,9 @@ type Events =
 	  }
 	| {
 			type: "ERROR_FETCHING_ENTITIES";
+	  }
+	| {
+			type: "CLIENT_CONNECTED";
 	  };
 
 type EventTypes = Pick<Events, "type">;
@@ -248,25 +252,28 @@ export const systemMachine = setup({
 			entry: () => {
 				DeskThing.sendLog("[HA] Setting up WS connecting");
 			},
-			on: {
-				UPDATE_SETTINGS: [
-					{
-						guard: "hasTokenOrUrlChanged",
-						target: "#system.initialize",
-						actions: "assignSettings",
-						reenter: true,
-					},
-					{
-						guard: "hasValidConfig",
-						target: "#system.active",
-						actions: "assignSettings",
-						reenter: true,
-					},
-				],
-			},
 			initial: "idle",
 			states: {
 				idle: {
+					on: {
+						CLIENT_CONNECTED: {
+							actions: forwardTo("websocket"),
+						},
+						UPDATE_SETTINGS: [
+							{
+								guard: "hasTokenOrUrlChanged",
+								target: "#system.initialize",
+								actions: "assignSettings",
+								reenter: true,
+							},
+							{
+								guard: "hasValidConfig",
+								target: "#system.active",
+								actions: "assignSettings",
+								reenter: true,
+							},
+						],
+					},
 					invoke: {
 						src: "websocket",
 						id: "websocket",
