@@ -33,7 +33,7 @@ const websocket = fromCallback<
 		entities: string[];
 	}
 >(({ input: { connection, entities }, sendBack }) => {
-	subscribeEntities(
+	const unsubscribeEntities = subscribeEntities(
 		connection,
 		(ent) => {
 			sendBack({
@@ -43,6 +43,10 @@ const websocket = fromCallback<
 		},
 		entities
 	);
+
+	return () => {
+		unsubscribeEntities();
+	};
 });
 
 const websocketMachine = setup({
