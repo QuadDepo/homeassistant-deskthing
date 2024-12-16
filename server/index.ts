@@ -1,6 +1,6 @@
 import { DeskThing as DK } from "deskthing-server";
 import { createActor } from "xstate";
-import { systemMachine } from "./systemMachine";
+import { systemMachine, SystemMachineSnaphot } from "./systemMachine";
 import { normalizeSettings } from "./utils/normalizeSettings";
 const DeskThing = DK.getInstance();
 export { DeskThing };
@@ -12,13 +12,42 @@ const start = async () => {
 
 	const { url, token, entities } = normalizeSettings(Data?.settings);
 
-	createActor(systemMachine, {
+	const systemActor = createActor(systemMachine, {
 		input: {
 			url,
 			token,
 			entities,
 		},
 	}).start();
+
+	const normalizeSystemStateValue = (state: SystemMachineSnaphot) => {
+		if (state.matches("active")) {
+			return "ready";
+		}
+
+		if (
+			state.matches({
+				initialize: "config",
+			})
+		) {
+			return "config";
+		}
+
+		if (
+			state.matches({
+				initialize: "enitites",
+			})
+		) {
+			return "entities";
+		}
+	};
+
+	systemActor.subscribe((state) => {
+		DeskThing.sendDataToClient({
+			type: "SERVER_STATUS",
+			payload: normalizeSystemStateValue(state),
+		});
+	});
 };
 
 const stop = async () => {
