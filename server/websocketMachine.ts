@@ -88,10 +88,15 @@ const websocketMachine = setup({
 				}),
 				src: "getAuth",
 				onDone: {
-					actions: assign(({ context, event: { output } }) => ({
-						...context,
-						connection: output,
-					})),
+					actions: [
+						assign(({ context, event: { output } }) => ({
+							...context,
+							connection: output,
+						})),
+						() => {
+							DeskThing.sendLog("[HA] Connected");
+						},
+					],
 					target: "connected",
 				},
 				onError: {
@@ -105,6 +110,7 @@ const websocketMachine = setup({
 			},
 		},
 		connected: {
+			entry: () => DeskThing.sendLog("[HA] Subscribing to entities"),
 			invoke: {
 				input: ({ context: { connection, entities } }) => ({
 					// Why??
