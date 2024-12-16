@@ -1,5 +1,6 @@
 import { type Connection, type HassEntity } from "home-assistant-js-websocket";
 import {
+	Actor,
 	assertEvent,
 	assign,
 	EventObject,
@@ -7,6 +8,7 @@ import {
 	fromCallback,
 	fromPromise,
 	setup,
+	SnapshotFrom,
 } from "xstate";
 import { getHomeAssistantStates } from "./utils/getHomeAssistantStates";
 import { DeskThing } from ".";
@@ -52,25 +54,12 @@ const onClientEvents = fromCallback<EventObject>(({ sendBack }) => {
 	});
 });
 
-function createEvent(type: Events["type"]): EventTypes {
-	return { type };
-}
-
 type Events =
 	| {
 			type: "UPDATE_SETTINGS";
 			url: string;
 			token: string;
 			entities?: string[];
-	  }
-	| {
-			type: "WAITING_FOR_SETTINGS";
-	  }
-	| {
-			type: "WAITING_FOR_ENTITIES";
-	  }
-	| {
-			type: "ERROR_FETCHING_ENTITIES";
 	  }
 	| {
 			type: "CLIENT_CONNECTED";
@@ -174,15 +163,9 @@ export const systemMachine = setup({
 						{
 							guard: "hasValidConfig",
 							target: "enitites",
-							actions: () => {
-								DeskThing.sendLog("[HA] Valid config");
-							},
-						},
-						{
 							actions: [
-								{
-									type: "sendEventToClient",
-									params: { event: createEvent("WAITING_FOR_SETTINGS") },
+								() => {
+									DeskThing.sendLog("[HA] Valid config");
 								},
 							],
 						},
@@ -221,26 +204,13 @@ export const systemMachine = setup({
 							},
 						},
 						error: {
-							entry: {
-								type: "sendEventToClient",
-								params: {
-									event: createEvent("ERROR_FETCHING_ENTITIES"),
-								},
-							},
+							// TODO: handle error
 						},
 						done: {
 							always: [
 								{
 									guard: "hasEntities",
 									target: "#system.active",
-								},
-								{
-									actions: {
-										type: "sendEventToClient",
-										params: {
-											event: createEvent("WAITING_FOR_ENTITIES"),
-										},
-									},
 								},
 							],
 						},
@@ -291,16 +261,13 @@ export const systemMachine = setup({
 					},
 				},
 				error: {
-					entry: [
-						{
-							type: "sendEventToClient",
-							params: {
-								event: createEvent("WAITING_FOR_ENTITIES"),
-							},
-						},
-					],
+					// TODO: Handle error
 				},
 			},
 		},
 	},
 });
+
+export type SystemMachine = typeof systemMachine;
+export type SystemMachineRef = Actor<SystemMachine>;
+export type SystemMachineSnaphot = SnapshotFrom<SystemMachineRef>;

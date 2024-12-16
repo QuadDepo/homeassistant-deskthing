@@ -1,3 +1,4 @@
+import { normalizeSystemStateValue } from "./utils/normalizeSystemStateValue";
 import { DeskThing as DK } from "deskthing-server";
 import { createActor } from "xstate";
 import { systemMachine } from "./systemMachine";
@@ -12,13 +13,20 @@ const start = async () => {
 
 	const { url, token, entities } = normalizeSettings(Data?.settings);
 
-	createActor(systemMachine, {
+	const systemActor = createActor(systemMachine, {
 		input: {
 			url,
 			token,
 			entities,
 		},
 	}).start();
+
+	systemActor.subscribe((state) => {
+		DeskThing.sendDataToClient({
+			type: "SERVER_STATUS",
+			payload: normalizeSystemStateValue(state),
+		});
+	});
 };
 
 const stop = async () => {
