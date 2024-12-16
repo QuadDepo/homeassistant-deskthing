@@ -6,15 +6,7 @@ import entityManagerMachine, {
 	EntityMachineActor,
 } from "./state/entityManagerMachine";
 
-import { createBrowserInspector } from "@statelyai/inspect";
-
-const { inspect } = createBrowserInspector();
 const deskthing = DeskThing.getInstance();
-
-deskthing.send({
-	type: "get",
-	request: "initial_entities",
-});
 
 const Entity = ({ id, actor }: { id: string; actor: EntityMachineActor }) => {
 	const entityState = useSelector(actor, (snapshot) => snapshot.context?.state);
@@ -27,9 +19,7 @@ const Entity = ({ id, actor }: { id: string; actor: EntityMachineActor }) => {
 };
 
 const App: React.FC = () => {
-	const actorRef = useActorRef(entityManagerMachine, {
-		inspect: import.meta.env.DEV ? inspect : undefined,
-	});
+	const actorRef = useActorRef(entityManagerMachine);
 
 	const refs = useSelector(actorRef, (snapshot) => snapshot.context.refs);
 
