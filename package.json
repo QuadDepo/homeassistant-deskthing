@@ -14,9 +14,12 @@
 		"zip-dist": "bash ./scripts/zip-dist.sh"
 	},
 	"dependencies": {
+		"@mdi/js": "^7.4.47",
+		"@mdi/react": "^1.6.1",
 		"@statelyai/inspect": "^0.4.0",
 		"@types/ws": "^8.5.13",
 		"@xstate/react": "^5.0.0",
+		"class-variance-authority": "^0.7.1",
 		"deskthing-client": "latest",
 		"deskthing-server": "latest",
 		"home-assistant-js-websocket": "^9.4.0",
