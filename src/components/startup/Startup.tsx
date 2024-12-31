@@ -46,7 +46,7 @@ const Startup = () => {
 		}
 	}, [startupStatus]);
 
-	if (isReady || true) {
+	if (isReady) {
 		return null;
 	}
 
