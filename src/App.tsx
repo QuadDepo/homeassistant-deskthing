@@ -33,15 +33,15 @@ const App: React.FC = () => {
 	}, []);
 
 	const entities = useMemo(() => {
-		return Object.values(refs);
+		return Object.entries(refs);
 	}, [refs]);
 
 	return (
 		<div className="bg-slate-800 w-screen h-screen">
 			<Startup />
 			<Grid>
-				{entities.map((entity) => (
-					<Entity machine={entity} />
+				{entities.map(([id, entity]) => (
+					<Entity id={id} machine={entity} />
 				))}
 			</Grid>
 		</div>

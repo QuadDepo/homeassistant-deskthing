@@ -8,17 +8,18 @@ type Size = "1x1" | "1x2" | "2x1" | "2x2" | "3x3";
 
 type Props = {
 	machine: EntityMachineActor;
+	id: string;
 	size?: Size;
 };
 
 const entityStyles = cva(["rounded-xl bg-slate-200/10"]);
 
-const Entity = ({ machine, size = "1x1" }: Props) => {
+const Entity = ({ machine, id, size = "1x1" }: Props) => {
 	const entityContent = useMemo(() => {
-		if (machine.id.startsWith("light.")) {
+		if (id.startsWith("light.")) {
 			return <LightEntity machine={machine} />;
 		}
-	}, [machine]);
+	}, [machine, id]);
 
 	return (
 		<div className={cx(entityStyles(), positionToTailwindClass(size))}>
