@@ -1,6 +1,12 @@
 import { DeskThing } from "deskthing-client";
 import { HassEntities, HassEntity } from "home-assistant-js-websocket";
-import { ActorRefFromLogic, assign, setup, SnapshotFrom } from "xstate";
+import {
+	ActorRefFromLogic,
+	assign,
+	createActor,
+	setup,
+	SnapshotFrom,
+} from "xstate";
 const deskthing = DeskThing.getInstance();
 // TODO: Create seperate file for this
 const entityMachine = setup({
@@ -87,4 +93,4 @@ export type EntityManagerMachineSnapshot = SnapshotFrom<
 	typeof entityManagerMachine
 >;
 
-export default entityManagerMachine;
+export const entityManagerActor = createActor(entityManagerMachine).start();
