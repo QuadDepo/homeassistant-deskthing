@@ -2,8 +2,7 @@ import { useActorRef, useSelector } from "@xstate/react";
 import { DeskThing, SocketData } from "deskthing-client";
 import { useEffect, useMemo } from "react";
 import startupMachine from "../../state/startupMachine";
-
-import HomeAssistantLogo from "./assets/homeassistant.svg";
+import HomeAssistantLogo from "../../assets/homeassistant.svg";
 
 const deskthing = DeskThing.getInstance();
 

@@ -1,4 +1,5 @@
 import {
+	callService,
 	Connection,
 	createConnection,
 	createLongLivedTokenAuth,
@@ -71,6 +72,11 @@ const websocketMachine = setup({
 					type: "CLIENT_CONNECTED";
 			  }
 			| {
+					type: "ENTITY_ACTION";
+					action: string;
+					entity_id: string;
+			  }
+			| {
 					type: "ENTITIES_UPDATED";
 					entities: HassEntities[];
 			  },
@@ -133,6 +139,19 @@ const websocketMachine = setup({
 						DeskThing.sendDataToClient({
 							type: "homeassistant_data",
 							payload: event.entities,
+						});
+					},
+				},
+				ENTITY_ACTION: {
+					actions: ({ context, event }) => {
+						if (!context.connection) {
+							return;
+						}
+
+						const [domain, service] = event.action.split("/");
+
+						callService(context.connection, domain, service, {
+							entity_id: event.entity_id,
 						});
 					},
 				},
