@@ -35,7 +35,7 @@ const App: React.FC = () => {
 	}, [refs]);
 
 	return (
-		<div className="bg-slate-800 w-screen h-screen">
+		<div className="bg-dark-grey w-screen h-screen">
 			<Startup />
 			<Grid>
 				{entities.map(([id, entity]) => (

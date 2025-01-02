@@ -24,6 +24,21 @@ const entityStyles = cva(["rounded-xl", "bg-white/70"], {
 	},
 });
 
+const contentStyles = cva([
+	"flex",
+	"flex-col",
+	"justify-between",
+	"h-full",
+	"p-3",
+]);
+
+const titleStyles = cva([
+	"text-pretty",
+	"text-sm",
+	"text-ellipsis",
+	"line-clamp-2",
+]);
+
 const BaseEntity = ({ machine, id, size = "1x1" }: Props) => {
 	const entityType = getEntityType(id);
 
@@ -61,12 +76,9 @@ const BaseEntity = ({ machine, id, size = "1x1" }: Props) => {
 				positionToTailwindClass(size)
 			)}
 		>
-			<div
-				onClick={handleOnClick}
-				className="flex flex-col justify-between h-full p-3"
-			>
-				<Icon path={IconPath} size={1.5} />
-				<p>{friendlyName}</p>
+			<div onClick={handleOnClick} className={contentStyles()}>
+				<Icon path={IconPath} size={1.25} />
+				<p className={titleStyles()}>{friendlyName}</p>
 			</div>
 		</div>
 	);
