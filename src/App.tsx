@@ -1,13 +1,11 @@
 import React, { useEffect, useMemo } from "react";
-import { DeskThing } from "deskthing-client";
 import { SocketData } from "deskthing-client/dist/types";
 import Startup from "./components/startup/Startup";
 import Grid from "./components/grid/Grid";
 import { entityManagerActor } from "./state/entityManagerMachine";
 import { useSelector } from "@xstate/react";
-import Entity from "./components/entity/Entity";
-
-const deskthing = DeskThing.getInstance();
+import BaseEntity from "./components/entity/BaseEntity";
+import deskthing from "./Deskthing";
 
 const App: React.FC = () => {
 	const refs = useSelector(
@@ -41,7 +39,7 @@ const App: React.FC = () => {
 			<Startup />
 			<Grid>
 				{entities.map(([id, entity]) => (
-					<Entity id={id} machine={entity} />
+					<BaseEntity id={id} machine={entity} />
 				))}
 			</Grid>
 		</div>
