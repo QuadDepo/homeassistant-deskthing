@@ -63,6 +63,11 @@ type Events =
 	  }
 	| {
 			type: "CLIENT_CONNECTED";
+	  }
+	| {
+			type: "ENTITY_ACTION";
+			action: string;
+			entity_id: string;
 	  };
 
 type EventTypes = Pick<Events, "type">;
@@ -227,6 +232,9 @@ export const systemMachine = setup({
 				idle: {
 					on: {
 						CLIENT_CONNECTED: {
+							actions: forwardTo("websocket"),
+						},
+						ENTITY_ACTION: {
 							actions: forwardTo("websocket"),
 						},
 						UPDATE_SETTINGS: [
