@@ -147,11 +147,16 @@ const websocketMachine = setup({
 						if (!context.connection) {
 							return;
 						}
-
 						const [domain, service] = event.action.split("/");
+
+						DeskThing.sendLog(`[HA] ${domain}, ${service} ${event.entity_id}`);
 
 						callService(context.connection, domain, service, {
 							entity_id: event.entity_id,
+							// TODO: figure out best way for payload
+							...(event.brightness !== undefined && {
+								brightness: event.brightness,
+							}),
 						});
 					},
 				},
