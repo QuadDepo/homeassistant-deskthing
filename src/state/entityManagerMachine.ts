@@ -1,60 +1,24 @@
-import { DeskThing } from "deskthing-client";
-import { HassEntities, HassEntity } from "home-assistant-js-websocket";
-import {
-	ActorRefFromLogic,
-	assign,
-	createActor,
-	setup,
-	SnapshotFrom,
-} from "xstate";
-const deskthing = DeskThing.getInstance();
-// TODO: Create seperate file for this
-const entityMachine = setup({
-	types: {
-		context: {} as HassEntity,
-		input: {} as HassEntity,
-		events: {} as
-			| {
-					type: "UPDATE";
-					entity: HassEntity;
-			  }
-			| {
-					type: "ACTION";
-			  },
-	},
-}).createMachine({
-	id: "entity",
-	context: ({ input }) => ({
-		...input,
-	}),
-	on: {
-		ACTION: {
-			actions: ({ context }) => {
-				deskthing.send({
-					type: "get",
-					payload: {
-						type: "ENTITY_ACTION",
-						action: "light/toggle",
-						entity_id: context.entity_id,
-					},
-				});
-			},
-		},
-		UPDATE: {
-			actions: assign(({ context, event: { entity } }) => ({
-				...context,
-				...entity,
-			})),
-		},
-	},
-});
+import { HassEntities } from "home-assistant-js-websocket";
+import { assign, createActor, setup, SnapshotFrom } from "xstate";
+import deskthing from "../Deskthing";
+import lightMachine, { LightEntityMachineActor } from "./lightMachine";
+import getEntityType from "../utils/getEntityType";
 
-export type EntityMachineActor = ActorRefFromLogic<typeof entityMachine>;
+type EntityMachineTypes = LightEntityMachineActor;
+
+const getEntityMachine = (id: string) => {
+	switch (getEntityType(id)) {
+		case "light":
+			return lightMachine;
+		default:
+			return null;
+	}
+};
 
 const entityManagerMachine = setup({
 	types: {
 		context: {} as {
-			refs: Record<string, EntityMachineActor>;
+			refs: Record<string, EntityMachineTypes>;
 		},
 		events: {} as {
 			type: "ENTITIES_CHANGE";
@@ -77,14 +41,21 @@ const entityManagerMachine = setup({
 	on: {
 		ENTITIES_CHANGE: {
 			actions: assign(({ context, spawn, event: { entities } }) => {
-				const refs: Record<string, EntityMachineActor> = {};
+				const refs: Record<string, EntityMachineTypes> = {};
 
 				for (const entityId in entities) {
 					const entityTarget = context.refs[entityId];
 
 					// NOTE: If entity doesn't exist yet spawn new entity machine
 					if (!entityTarget) {
-						const spawnedEntity = spawn(entityMachine, {
+						const machine = getEntityMachine(entityId);
+
+						if (!machine) {
+							// TODO: handle missing machine here
+							continue;
+						}
+
+						const spawnedEntity = spawn(machine, {
 							input: entities[entityId],
 						});
 						refs[entityId] = spawnedEntity;
