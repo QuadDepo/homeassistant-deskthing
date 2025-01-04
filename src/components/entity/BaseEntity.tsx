@@ -1,16 +1,20 @@
 import { cva, cx } from "class-variance-authority";
-import { EntityMachineActor } from "../../state/entityManagerMachine";
 import { positionToTailwindClass } from "../../utils/positionToTailwindClass";
-import { useCallback, useMemo } from "react";
+import { MouseEvent, useCallback, useMemo, useRef } from "react";
 import { useSelector } from "@xstate/react";
 import { mdiAlertCircle, mdiLightbulb } from "@mdi/js";
 import Icon from "@mdi/react";
 import getEntityType from "../../utils/getEntityType";
+import Dialog, { DialogHandle } from "../dialog/Dialog";
+import LightDialog from "../dialog/LightDialog";
+import { LightEntityMachineActor } from "../../state/lightMachine";
 
 type Size = "1x1" | "1x2" | "2x1" | "2x2" | "3x3";
 
+type BaseEntitiesActors = LightEntityMachineActor;
+
 type Props = {
-	machine: EntityMachineActor;
+	machine: BaseEntitiesActors;
 	id: string;
 	size?: Size;
 };
@@ -41,6 +45,9 @@ const titleStyles = cva([
 
 const BaseEntity = ({ machine, id, size = "1x1" }: Props) => {
 	const entityType = getEntityType(id);
+	const pressTimer = useRef<NodeJS.Timeout>();
+	const dialogRef = useRef<DialogHandle>(null);
+	const isLongPress = useRef<boolean>(false);
 
 	const friendlyName = useSelector(
 		machine,
@@ -51,11 +58,30 @@ const BaseEntity = ({ machine, id, size = "1x1" }: Props) => {
 		machine,
 		(snapshot) => snapshot.context.state === "on"
 	);
+	const handlePressStart = useCallback(() => {
+		isLongPress.current = false;
+		pressTimer.current = setTimeout(() => {
+			isLongPress.current = true;
+			dialogRef.current?.open();
+		}, 500);
+	}, []);
 
-	const handleOnClick = useCallback(() => {
-		machine.send({
-			type: "ACTION",
-		});
+	const handlePressEnd = useCallback(() => {
+		if (pressTimer.current) {
+			clearTimeout(pressTimer.current);
+		}
+
+		if (!isLongPress.current && !dialogRef.current?.element?.open) {
+			machine.send({
+				type: "TOGGLE",
+			});
+		}
+
+		isLongPress.current = false;
+	}, []);
+
+	const handleContextMenu = useCallback((e: MouseEvent) => {
+		e.preventDefault();
 	}, []);
 
 	const IconPath = useMemo(() => {
@@ -65,22 +91,40 @@ const BaseEntity = ({ machine, id, size = "1x1" }: Props) => {
 			default:
 				return mdiAlertCircle;
 		}
-	}, [entityType]);
+	}, [entityType, machine]);
+
+	const DialogContent = useMemo(() => {
+		switch (entityType) {
+			case "light":
+				return <LightDialog machine={machine} />;
+			default:
+				return null;
+		}
+	}, [machine]);
 
 	return (
-		<div
-			className={cx(
-				entityStyles({
-					active: isActive,
-				}),
-				positionToTailwindClass(size)
-			)}
-		>
-			<div onClick={handleOnClick} className={contentStyles()}>
-				<Icon path={IconPath} size={1.25} />
-				<p className={titleStyles()}>{friendlyName}</p>
+		<>
+			<Dialog ref={dialogRef}>{DialogContent}</Dialog>
+			<div
+				className={cx(
+					entityStyles({
+						active: isActive,
+					}),
+					positionToTailwindClass(size)
+				)}
+				onMouseDown={handlePressStart}
+				onMouseUp={handlePressEnd}
+				onMouseLeave={handlePressEnd}
+				onTouchStart={handlePressStart}
+				onTouchEnd={handlePressEnd}
+				onContextMenu={handleContextMenu}
+			>
+				<div className={contentStyles()}>
+					<Icon path={IconPath} size={1.25} />
+					<p className={titleStyles()}>{friendlyName}</p>
+				</div>
 			</div>
-		</div>
+		</>
 	);
 };
 
