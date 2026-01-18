@@ -1,5 +1,5 @@
+import { DeskThing } from "@deskthing/server";
 import { SETTING_TYPES, SettingOption } from "@deskthing/types";
-import { DeskThing } from "..";
 import { HassEntity } from "home-assistant-js-websocket";
 
 export const createEntitySetting = (
@@ -40,8 +40,8 @@ export const updateEntityOptions = (entities: HassEntity[]) => {
   DeskThing.setSettingOptions("entities", options);
 };
 
-export const createBasicSettings = () => {
-  DeskThing.initSettings({
+export const createBasicSettings = async () => {
+  await DeskThing.initSettings({
     url: {
       id: "url",
       label: "Your HomeAssistant URL",
