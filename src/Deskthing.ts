@@ -1,5 +1,5 @@
-import { DeskThing } from "deskthing-client";
+import { DeskThing } from "@deskthing/client";
 
-const deskthing = DeskThing.getInstance();
+const deskthing = DeskThing;
 
 export default deskthing;

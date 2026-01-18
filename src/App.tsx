@@ -1,49 +1,56 @@
 import React, { useEffect, useMemo } from "react";
-import { SocketData } from "deskthing-client/dist/types";
+import { SocketData } from "@deskthing/types";
 import Startup from "./components/startup/Startup";
 import Grid from "./components/grid/Grid";
 import { entityManagerActor } from "./state/entityManagerMachine";
 import { useSelector } from "@xstate/react";
 import BaseEntity from "./components/entity/BaseEntity";
-import deskthing from "./Deskthing";
+import { DeskThing } from "@deskthing/client";
 
 const App: React.FC = () => {
-	const refs = useSelector(
-		entityManagerActor,
-		(snapshot) => snapshot.context.refs
-	);
+  const refs = useSelector(
+    entityManagerActor,
+    (snapshot) => snapshot.context.refs,
+  );
 
-	useEffect(() => {
-		const onAppData = async (data: SocketData) => {
-			switch (data.type) {
-				case "homeassistant_data":
-					entityManagerActor.send({
-						type: "ENTITIES_CHANGE",
-						entities: data.payload,
-					});
-					break;
-				default:
-					console.log(`Unknown data type recieved from server ${data.type}`);
-			}
-		};
+  useEffect(() => {
+    const onEntityData = (data: SocketData) => {
+      console.log("Received homeassistant_data:", data);
+      entityManagerActor.send({
+        type: "ENTITIES_CHANGE",
+        entities: data.payload,
+      });
+    };
 
-		deskthing.on("homeassistant", onAppData);
-	}, []);
+    const off = DeskThing.on("homeassistant_data", onEntityData);
 
-	const entities = useMemo(() => {
-		return Object.entries(refs);
-	}, [refs]);
+    // Notify server that client is ready - this triggers entity data to be sent
+    DeskThing.send({
+      type: "get",
+      payload: {
+        type: "CLIENT_CONNECTED",
+      },
+    });
 
-	return (
-		<div className="bg-dark-grey w-screen h-screen">
-			<Startup />
-			<Grid>
-				{entities.map(([id, entity]) => (
-					<BaseEntity id={id} machine={entity} />
-				))}
-			</Grid>
-		</div>
-	);
+    return () => {
+      off();
+    };
+  }, []);
+
+  const entities = useMemo(() => {
+    return Object.entries(refs);
+  }, [refs]);
+
+  return (
+    <div className="bg-dark-grey w-screen h-screen">
+      <Startup />
+      <Grid>
+        {entities.map(([id, entity]) => (
+          <BaseEntity key={id} id={id} machine={entity} />
+        ))}
+      </Grid>
+    </div>
+  );
 };
 
 export default App;
