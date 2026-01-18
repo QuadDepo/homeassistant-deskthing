@@ -87,6 +87,7 @@ type Events =
       type: "ENTITY_ACTION";
       action: string;
       entity_id: string;
+      data?: object;
     };
 
 type EventTypes = Pick<Events, "type">;
