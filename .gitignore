@@ -16,3 +16,6 @@ logs
 
 # env files
 .env
+
+# btca
+.btca

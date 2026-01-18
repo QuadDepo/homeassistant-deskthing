@@ -1,0 +1,97 @@
+{
+	"$schema": "https://btca.dev/btca.schema.json",
+	"resources": [
+		{
+			"name": "react",
+			"type": "git",
+			"url": "https://github.com/reactjs/react.dev",
+			"branch": "main",
+			"searchPath": "src/content",
+			"specialNotes": "React documentation. Focus on content directory for markdown docs."
+		},
+		{
+			"name": "tailwind",
+			"type": "git",
+			"url": "https://github.com/tailwindlabs/tailwindcss.com",
+			"branch": "main",
+			"searchPath": "src/docs",
+			"specialNotes": "Tailwind CSS v3 documentation."
+		},
+		{
+			"name": "xstate",
+			"type": "git",
+			"url": "https://github.com/statelyai/xstate",
+			"branch": "main",
+			"searchPath": "packages",
+			"specialNotes": "XState v5 state machine library. Check packages/xstate for core and packages/xstate-react for React bindings."
+		},
+		{
+			"name": "homeAssistantJsWebsocket",
+			"type": "git",
+			"url": "https://github.com/home-assistant/home-assistant-js-websocket",
+			"branch": "master",
+			"specialNotes": "Home Assistant JavaScript WebSocket client library for communicating with HA."
+		},
+		{
+			"name": "vite",
+			"type": "git",
+			"url": "https://github.com/vitejs/vite",
+			"branch": "main",
+			"searchPath": "packages/vite",
+			"specialNotes": "Vite build tool. Focus on packages/vite for core functionality."
+		},
+		{
+			"name": "typescript",
+			"type": "git",
+			"url": "https://github.com/microsoft/TypeScript-Website",
+			"branch": "v2",
+			"searchPath": "packages/documentation",
+			"specialNotes": "TypeScript documentation website. Focus on packages/documentation for docs content."
+		},
+		{
+			"name": "classVarianceAuthority",
+			"type": "git",
+			"url": "https://github.com/joe-bell/cva",
+			"branch": "main",
+			"specialNotes": "Class Variance Authority (CVA) for creating variant-based component styles."
+		},
+		{
+			"name": "deskthingClient",
+			"type": "git",
+			"url": "https://github.com/ItsRiprod/deskthing-app-client",
+			"branch": "main",
+			"specialNotes": "DeskThing app client library for communication between webpage and client."
+		},
+		{
+			"name": "deskthingServer",
+			"type": "git",
+			"url": "https://github.com/ItsRiprod/deskthing-app-server",
+			"branch": "main",
+			"specialNotes": "DeskThing app server library for server-side app functionality."
+		},
+		{
+			"name": "deskthingTypes",
+			"type": "git",
+			"url": "https://github.com/ItsRiprod/deskthing-types",
+			"branch": "main",
+			"specialNotes": "DeskThing shared TypeScript types and interfaces."
+		},
+		{
+			"name": "deskthingTemplate",
+			"type": "git",
+			"url": "https://github.com/ItsRiprod/deskthing-template",
+			"branch": "main",
+			"specialNotes": "DeskThing app template. Reference for app structure and best practices."
+		},
+		{
+			"name": "deskthingCli",
+			"type": "git",
+			"url": "https://github.com/ItsRiprod/deskthing-cli",
+			"branch": "main",
+			"specialNotes": "DeskThing CLI tool for scaffolding and managing DeskThing apps."
+		}
+	],
+	"model": "claude-haiku-4-5",
+	"provider": "opencode",
+	"providerTimeoutMs": 300000
+}
