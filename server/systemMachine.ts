@@ -49,18 +49,26 @@ const onDeskThingEvents = fromCallback<EventObject>(({ sendBack }) => {
 const onClientEvents = fromCallback<EventObject>(({ sendBack }) => {
   console.log("[HA systemMachine] Registering onClientEvents 'get' handler");
   DeskThing.on("get", async (socket) => {
-    console.log("[HA systemMachine] Received 'get' request:", JSON.stringify(socket));
+    console.log(
+      "[HA systemMachine] Received 'get' request:",
+      JSON.stringify(socket),
+    );
     if (
       socket.payload &&
       typeof socket.payload === "object" &&
       "type" in socket.payload
     ) {
-      console.log("[HA systemMachine] Forwarding payload to machine:", socket.payload);
+      console.log(
+        "[HA systemMachine] Forwarding payload to machine:",
+        socket.payload,
+      );
       sendBack({
         ...(socket.payload as Events),
       });
     } else {
-      console.log("[HA systemMachine] Ignoring - no valid payload.type (handled by index.ts)");
+      console.log(
+        "[HA systemMachine] Ignoring - no valid payload.type (handled by index.ts)",
+      );
     }
   });
 });
@@ -193,7 +201,7 @@ export const systemMachine = setup({
           always: [
             {
               guard: "hasValidConfig",
-              target: "enitites",
+              target: "entities",
               actions: [
                 () => {
                   console.log("[HA] Valid config");
@@ -202,7 +210,7 @@ export const systemMachine = setup({
             },
           ],
         },
-        enitites: {
+        entities: {
           initial: "idle",
           states: {
             idle: {
