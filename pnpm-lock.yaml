@@ -35,6 +35,9 @@ importers:
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
+      core-js:
+        specifier: ^3.47.0
+        version: 3.47.0
       home-assistant-js-websocket:
         specifier: ^9.4.0
         version: 9.6.0
