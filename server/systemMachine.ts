@@ -11,7 +11,6 @@ import {
   SnapshotFrom,
 } from "xstate";
 import { getHomeAssistantStates } from "./utils/getHomeAssistantStates.js";
-import { DeskThing } from "./index.js";
 import websocketMachine from "./websocketMachine.js";
 import {
   createBasicSettings,
@@ -19,6 +18,7 @@ import {
 } from "./utils/createSettings.js";
 import { SocketData } from "@deskthing/types";
 import { normalizeSettings } from "./utils/normalizeSettings.js";
+import { DeskThing } from "@deskthing/server";
 
 const getAllEntities = fromPromise<
   HassEntity[],
@@ -47,15 +47,20 @@ const onDeskThingEvents = fromCallback<EventObject>(({ sendBack }) => {
 });
 
 const onClientEvents = fromCallback<EventObject>(({ sendBack }) => {
+  console.log("[HA systemMachine] Registering onClientEvents 'get' handler");
   DeskThing.on("get", async (socket) => {
+    console.log("[HA systemMachine] Received 'get' request:", JSON.stringify(socket));
     if (
       socket.payload &&
       typeof socket.payload === "object" &&
       "type" in socket.payload
     ) {
+      console.log("[HA systemMachine] Forwarding payload to machine:", socket.payload);
       sendBack({
         ...(socket.payload as Events),
       });
+    } else {
+      console.log("[HA systemMachine] Ignoring - no valid payload.type (handled by index.ts)");
     }
   });
 });
@@ -124,6 +129,13 @@ export const systemMachine = setup({
     hasTokenOrUrlChanged: ({ context, event }) => {
       assertEvent(event, "UPDATE_SETTINGS");
       return !(context.url === event.url && context.token === event.token);
+    },
+    hasEntitiesChanged: ({ context, event }) => {
+      assertEvent(event, "UPDATE_SETTINGS");
+      const currentEntities = context.entities || [];
+      const newEntities = event.entities || [];
+      if (currentEntities.length !== newEntities.length) return true;
+      return !currentEntities.every((e, i) => e === newEntities[i]);
     },
   },
   actors: {
@@ -253,16 +265,22 @@ export const systemMachine = setup({
             },
             UPDATE_SETTINGS: [
               {
+                // URL or token changed - need to re-initialize
                 guard: "hasTokenOrUrlChanged",
                 target: "#system.initialize",
                 actions: "assignSettings",
                 reenter: true,
               },
               {
-                guard: "hasValidConfig",
+                // Entities changed - need to restart websocket with new entity list
+                guard: "hasEntitiesChanged",
                 target: "#system.active",
                 actions: "assignSettings",
                 reenter: true,
+              },
+              {
+                // No meaningful change - just update settings without restart
+                actions: "assignSettings",
               },
             ],
           },
