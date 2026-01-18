@@ -1,40 +1,67 @@
-import { normalizeSystemStateValue } from "./utils/normalizeSystemStateValue";
-import { DeskThing as DK } from "deskthing-server";
+import { normalizeSystemStateValue } from "./utils/normalizeSystemStateValue.js";
+import { createDeskThing } from "@deskthing/server";
 import { createActor } from "xstate";
-import { systemMachine } from "./systemMachine";
-import { normalizeSettings } from "./utils/normalizeSettings";
-const DeskThing = DK.getInstance();
-export { DeskThing };
+import { systemMachine } from "./systemMachine.js";
+import { normalizeSettings } from "./utils/normalizeSettings.js";
+import { createBasicSettings } from "./utils/createSettings.js";
+import { DESKTHING_EVENTS, SocketData } from "@deskthing/types";
+
+const DeskThing = createDeskThing();
 
 const start = async () => {
-	let Data = await DeskThing.getData();
+  console.log("[HA] Starting Home Assistant app...");
 
-	DeskThing.sendLog("[HA] Starting HomeAssistant");
+  await createBasicSettings();
 
-	const { url, token, entities } = normalizeSettings(Data?.settings);
+  console.log("[HA] Settings schema initialized");
 
-	const systemActor = createActor(systemMachine, {
-		input: {
-			url,
-			token,
-			entities,
-		},
-	}).start();
+  const settings = await DeskThing.getSettings();
 
-	systemActor.subscribe((state) => {
-		DeskThing.sendDataToClient({
-			type: "SERVER_STATUS",
-			payload: normalizeSystemStateValue(state),
-		});
-	});
+  console.log("[HA] Settings", JSON.stringify(settings, null, 2));
+
+  const { url, token, entities } = normalizeSettings(settings);
+
+  const systemActor = createActor(systemMachine, {
+    input: {
+      url,
+      token,
+      entities,
+    },
+  }).start();
+
+  systemActor.subscribe((state) => {
+    const status = normalizeSystemStateValue(state);
+    console.log("[HA Server] State changed, sending SERVER_STATUS:", status);
+    DeskThing.send({
+      type: "SERVER_STATUS",
+      payload: status,
+    });
+  });
+
+  console.log("[HA Server] Registering 'get' handler for status requests");
+
+  DeskThing.on("get", (socket: SocketData) => {
+    console.log("[HA Server] Received 'get' request:", JSON.stringify(socket));
+
+    if (socket.request === "status") {
+      const status = normalizeSystemStateValue(systemActor.getSnapshot());
+
+      console.log("[HA Server] Responding with SERVER_STATUS:", status);
+
+      DeskThing.send({
+        type: "SERVER_STATUS",
+        payload: status,
+      });
+    }
+  });
 };
 
 const stop = async () => {
-	// Do nothing yet...
+  // Do nothing yet...
 };
 
 // Main Entrypoint of the server
-DeskThing.on("start", start);
+DeskThing.on(DESKTHING_EVENTS.START, start);
 
 // Main exit point of the server
-DeskThing.on("stop", stop);
+DeskThing.on(DESKTHING_EVENTS.STOP, stop);

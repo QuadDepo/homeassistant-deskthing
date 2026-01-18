@@ -1,6 +1,6 @@
 ## btca
 
-When you need up-to-date information about technologies used in this project, use btca to query source repositories directly.
+When you need up-to-date information about technologies used in this project, ask the user if they'd like you to use btca to research.
 
 **Available resources**: react, tailwind, xstate, homeAssistantJsWebsocket, vite, typescript, classVarianceAuthority, deskthingClient, deskthingServer, deskthingTypes, deskthingTemplate, deskthingCli
 

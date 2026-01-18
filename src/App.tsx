@@ -1,49 +1,86 @@
-import React, { useEffect, useMemo } from "react";
-import { SocketData } from "deskthing-client/dist/types";
-import Startup from "./components/startup/Startup";
-import Grid from "./components/grid/Grid";
-import { entityManagerActor } from "./state/entityManagerMachine";
+import { FC, useEffect, useMemo, useState } from "react";
+import { SocketData } from "@deskthing/types";
+import DeskThing from "./Deskthing";
 import { useSelector } from "@xstate/react";
+import { entityManagerActor } from "./state/entityManagerMachine";
+import Grid from "./components/grid/Grid";
 import BaseEntity from "./components/entity/BaseEntity";
-import deskthing from "./Deskthing";
+import Startup from "./components/startup/Startup";
+import { type HassEntities } from "home-assistant-js-websocket";
 
-const App: React.FC = () => {
-	const refs = useSelector(
-		entityManagerActor,
-		(snapshot) => snapshot.context.refs
-	);
+console.log("[HA Client] App.tsx module loaded");
 
-	useEffect(() => {
-		const onAppData = async (data: SocketData) => {
-			switch (data.type) {
-				case "homeassistant_data":
-					entityManagerActor.send({
-						type: "ENTITIES_CHANGE",
-						entities: data.payload,
-					});
-					break;
-				default:
-					console.log(`Unknown data type recieved from server ${data.type}`);
-			}
-		};
+const App: FC = () => {
+  const [isConnected, setIsConnected] = useState(false);
 
-		deskthing.on("homeassistant", onAppData);
-	}, []);
+  // Get entity refs from the XState actor
+  const entityRefs = useSelector(
+    entityManagerActor,
+    (state) => state.context.refs,
+  );
+  const entityIds = useMemo(() => Object.keys(entityRefs), [entityRefs]);
 
-	const entities = useMemo(() => {
-		return Object.entries(refs);
-	}, [refs]);
+  // Initialize DeskThing connection
+  useEffect(() => {
+    const initConnection = async () => {
+      console.log("[HA Client] Checking DeskThing connection...");
+      try {
+        const manifest = await DeskThing.getManifest();
+        if (manifest) {
+          console.log("[HA Client] DeskThing connected");
+          setIsConnected(true);
+        } else {
+          setTimeout(initConnection, 500);
+        }
+      } catch (error) {
+        console.error("[HA Client] Connection error:", error);
+        setTimeout(initConnection, 1000);
+      }
+    };
 
-	return (
-		<div className="bg-dark-grey w-screen h-screen">
-			<Startup />
-			<Grid>
-				{entities.map(([id, entity]) => (
-					<BaseEntity id={id} machine={entity} />
-				))}
-			</Grid>
-		</div>
-	);
+    initConnection();
+  }, []);
+
+  // Set up entity data listener after connection
+  useEffect(() => {
+    if (!isConnected) return;
+
+    console.log("[HA Client] Setting up entity listener");
+
+    const onEntityData = (data: SocketData) => {
+      const entities = data.payload as HassEntities | undefined;
+      if (entities) {
+        console.log(
+          "[HA Client] Received",
+          Object.keys(entities).length,
+          "entities",
+        );
+        entityManagerActor.send({ type: "ENTITIES_CHANGE", entities });
+      }
+    };
+
+    const off = DeskThing.on("homeassistant_data", onEntityData);
+
+    // Request initial data
+    console.log("[HA Client] Sending CLIENT_CONNECTED");
+    DeskThing.send({
+      type: "get",
+      payload: { type: "CLIENT_CONNECTED" },
+    });
+
+    return () => off();
+  }, [isConnected]);
+
+  return (
+    <div className="bg-black w-screen h-screen overflow-hidden">
+      <Startup />
+      <Grid>
+        {entityIds.map((id) => (
+          <BaseEntity key={id} id={id} machine={entityRefs[id]} />
+        ))}
+      </Grid>
+    </div>
+  );
 };
 
 export default App;

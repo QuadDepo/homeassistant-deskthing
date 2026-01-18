@@ -2,7 +2,7 @@ import {
 	AppSettings,
 	SettingsString,
 	SettingsMultiSelect,
-} from "deskthing-server";
+} from "@deskthing/types";
 
 export const normalizeSettings = (settings?: AppSettings | null) => {
 	const url = (settings?.url as SettingsString)?.value || "";
