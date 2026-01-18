@@ -1,10 +1,10 @@
 import { FC, useEffect, useMemo, useState } from "react";
 import { SocketData } from "@deskthing/types";
 import DeskThing from "./Deskthing";
-import { useSelector } from "@xstate/react";
-import { entityManagerActor } from "./state/entityManagerMachine";
+import { useEntityStore } from "./stores/entityStore";
+import { getEntityDomain } from "./utils/entityTypes";
 import Grid from "./components/grid/Grid";
-import BaseEntity from "./components/entity/BaseEntity";
+import LightEntity from "./components/entity/LightEntity";
 import Startup from "./components/startup/Startup";
 import { type HassEntities } from "home-assistant-js-websocket";
 
@@ -13,12 +13,10 @@ console.log("[HA Client] App.tsx module loaded");
 const App: FC = () => {
   const [isConnected, setIsConnected] = useState(false);
 
-  // Get entity refs from the XState actor
-  const entityRefs = useSelector(
-    entityManagerActor,
-    (state) => state.context.refs,
-  );
-  const entityIds = useMemo(() => Object.keys(entityRefs), [entityRefs]);
+  const entities = useEntityStore((state) => state.entities);
+  const updateEntities = useEntityStore((state) => state.updateEntities);
+
+  const entityIds = useMemo(() => Object.keys(entities), [entities]);
 
   // Initialize DeskThing connection
   useEffect(() => {
@@ -53,9 +51,9 @@ const App: FC = () => {
         console.log(
           "[HA Client] Received",
           Object.keys(entities).length,
-          "entities",
+          "entities"
         );
-        entityManagerActor.send({ type: "ENTITIES_CHANGE", entities });
+        updateEntities(entities);
       }
     };
 
@@ -69,16 +67,24 @@ const App: FC = () => {
     });
 
     return () => off();
-  }, [isConnected]);
+  }, [isConnected, updateEntities]);
+
+  const renderEntity = (entityId: string) => {
+    const domain = getEntityDomain(entityId);
+
+    switch (domain) {
+      case "light":
+        return <LightEntity key={entityId} entityId={entityId} />;
+      // Future entity types will be added here
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="bg-black w-screen h-screen overflow-hidden">
       <Startup />
-      <Grid>
-        {entityIds.map((id) => (
-          <BaseEntity key={id} id={id} machine={entityRefs[id]} />
-        ))}
-      </Grid>
+      <Grid>{entityIds.map(renderEntity)}</Grid>
     </div>
   );
 };
