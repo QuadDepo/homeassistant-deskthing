@@ -1,9 +1,11 @@
 import { useActorRef, useSelector } from "@xstate/react";
-import { DeskThing } from "@deskthing/client";
+import DeskThing from "../../Deskthing";
 import { SocketData } from "@deskthing/types";
 import { useEffect, useMemo } from "react";
 import startupMachine from "../../state/startupMachine";
 import HomeAssistantLogo from "../../assets/homeassistant.svg";
+
+console.log("[HA Client] Startup.tsx module loaded");
 
 const Startup = () => {
   const startupRef = useActorRef(startupMachine);
@@ -18,22 +20,22 @@ const Startup = () => {
   );
 
   useEffect(() => {
-    const onServerStatus = async (data: SocketData) => {
-      console.log("Received SERVER_STATUS:", data);
-      startupRef.send({
-        type: "UPDATE_STATUS",
-        status: data.payload,
-      });
+    const onServerStatus = (data: SocketData) => {
+      const status = data.payload as string;
+      console.log("[Startup] Received SERVER_STATUS:", status);
+      startupRef.send({ type: "UPDATE_STATUS", status });
     };
 
-    // Request current status from server
-    DeskThing.send({ type: "get", request: "status" });
-
+    // Register listener immediately (works before connection)
     const off = DeskThing.on("SERVER_STATUS", onServerStatus);
 
-    return () => {
-      off();
-    };
+    // Request status once connected
+    DeskThing.getManifest().then(() => {
+      console.log("[Startup] Connected, requesting status");
+      DeskThing.send({ type: "get", request: "status" });
+    });
+
+    return off;
   }, [startupRef]);
 
   const getStatusText = useMemo(() => {
@@ -53,9 +55,10 @@ const Startup = () => {
   }
 
   return (
-    <div className="absolute w-full text-white h-full gap-10 flex flex-col justify-center items-center">
+    <div className="absolute w-full text-white h-full gap-10 flex flex-col justify-center items-center bg-black z-50">
       <img src={HomeAssistantLogo} className="w-1/2" />
       <p className="text-xl">{getStatusText}</p>
+      <p className="text-xs text-gray-500">Status: {startupStatus}</p>
     </div>
   );
 };
