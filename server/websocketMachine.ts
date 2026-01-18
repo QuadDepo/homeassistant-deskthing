@@ -7,8 +7,8 @@ import {
 } from "home-assistant-js-websocket";
 import { assign, EventObject, fromCallback, fromPromise, setup } from "xstate";
 import { subscribeEntities } from "./utils/subscribeEntities.js";
-import { DeskThing } from "./index.js";
 import WebSocket from "ws";
+import { DeskThing } from "@deskthing/server";
 
 //  NodeJS doesn't include a WebSocket client by default. We use the 'ws' package
 //  from NPM and polyfill it into the global namespace for compatibility.
