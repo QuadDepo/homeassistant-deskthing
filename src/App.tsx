@@ -1,7 +1,7 @@
-import { FC, useEffect, useMemo, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import { SocketData } from "@deskthing/types";
 import DeskThing from "./Deskthing";
-import { useEntityStore } from "./stores/entityStore";
+import { useEntityStore, useOrderedEntityIds } from "./stores/entityStore";
 import { getEntityDomain } from "./utils/entityTypes";
 import Grid from "./components/grid/Grid";
 import LightEntity from "./components/entity/LightEntity";
@@ -13,10 +13,10 @@ console.log("[HA Client] App.tsx module loaded");
 const App: FC = () => {
   const [isConnected, setIsConnected] = useState(false);
 
-  const entities = useEntityStore((state) => state.entities);
   const updateEntities = useEntityStore((state) => state.updateEntities);
+  const updateLayout = useEntityStore((state) => state.updateLayout);
 
-  const entityIds = useMemo(() => Object.keys(entities), [entities]);
+  const entityIds = useOrderedEntityIds();
 
   // Initialize DeskThing connection
   useEffect(() => {
@@ -57,7 +57,16 @@ const App: FC = () => {
       }
     };
 
-    const off = DeskThing.on("homeassistant_data", onEntityData);
+    const onLayoutConfig = (data: SocketData) => {
+      const layout = data.payload as { version: 1; items: Array<{ entityId: string }> } | undefined;
+      if (layout) {
+        console.log("[HA Client] Received layout config with", layout.items.length, "items");
+        updateLayout(layout);
+      }
+    };
+
+    const offEntityData = DeskThing.on("homeassistant_data", onEntityData);
+    const offLayoutConfig = DeskThing.on("LAYOUT_CONFIG", onLayoutConfig);
 
     // Request initial data
     console.log("[HA Client] Sending CLIENT_CONNECTED");
@@ -66,8 +75,11 @@ const App: FC = () => {
       payload: { type: "CLIENT_CONNECTED" },
     });
 
-    return () => off();
-  }, [isConnected, updateEntities]);
+    return () => {
+      offEntityData();
+      offLayoutConfig();
+    };
+  }, [isConnected, updateEntities, updateLayout]);
 
   const renderEntity = (entityId: string) => {
     const domain = getEntityDomain(entityId);
