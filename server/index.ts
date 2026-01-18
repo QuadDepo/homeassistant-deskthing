@@ -5,8 +5,11 @@ import { systemMachine } from "./systemMachine.js";
 import { normalizeSettings } from "./utils/normalizeSettings.js";
 import { createBasicSettings } from "./utils/createSettings.js";
 import { DESKTHING_EVENTS, SocketData } from "@deskthing/types";
+import { createConfigServer } from "./configServer/index.js";
 
 const DeskThing = createDeskThing();
+
+let configServer: ReturnType<typeof createConfigServer> | null = null;
 
 const start = async () => {
   console.log("[HA] Starting Home Assistant app...");
@@ -28,6 +31,10 @@ const start = async () => {
       entities,
     },
   }).start();
+
+  // Start the config server for entity layout configuration
+  configServer = createConfigServer(() => systemActor.getSnapshot());
+  configServer.start();
 
   systemActor.subscribe((state) => {
     const status = normalizeSystemStateValue(state);
