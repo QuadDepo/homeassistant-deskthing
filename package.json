@@ -8,9 +8,9 @@
   "scripts": {
     "dev": "deskthing dev --vite",
     "dev:vite": "vite",
-    "dev:config": "vite --config vite.config.config.ts",
-    "build": "vite build && pnpm run build-config && pnpm run build-server",
-    "build-config": "vite build --config vite.config.config.ts",
+    "dev:configui": "vite --config vite.configui.config.ts",
+    "build": "vite build && pnpm run build-configui && pnpm run build-server",
+    "build-configui": "vite build --config vite.configui.config.ts",
     "build-server": "esbuild server/index.ts --bundle --platform=node --outdir=dist/",
     "package": "deskthing package",
     "setup": "node setup.js",
