@@ -2,8 +2,8 @@ import { memo, useMemo } from "react";
 import type { LayoutItem } from "../../../shared/types/grid";
 import { positionKey, buildOccupancyMap } from "../../../shared/utils/grid";
 import type { EntityWithLayout } from "../../stores/configStore";
-import DraggableCell from "./cells/DraggableCell";
-import DroppableCell from "./cells/DroppableCell";
+import EntityCell from "./cells/EntityCell";
+import EmptyCell from "./cells/EmptyCell";
 
 interface GridCellsProps {
   gridConfig: { rows: number; cols: number };
@@ -43,7 +43,7 @@ const GridCells = memo(function GridCells({
 
           if (entity && entity.position?.row === row && entity.position?.col === col) {
             result.push(
-              <DraggableCell
+              <EntityCell
                 key={key}
                 row={row}
                 col={col}
@@ -57,7 +57,7 @@ const GridCells = memo(function GridCells({
           // Skip secondary cells - they're visually covered by the spanning entity
         } else {
           result.push(
-            <DroppableCell
+            <EmptyCell
               key={key}
               row={row}
               col={col}
