@@ -6,10 +6,48 @@ import { normalizeSettings } from "./utils/normalizeSettings.js";
 import { createBasicSettings } from "./utils/createSettings.js";
 import { DESKTHING_EVENTS, SocketData } from "@deskthing/types";
 import { createConfigServer } from "./configServer/index.js";
+import type { LayoutConfig } from "../shared/index.js";
+import { createEmptyLayout } from "../shared/index.js";
 
 const DeskThing = createDeskThing();
 
 let configServer: ReturnType<typeof createConfigServer> | null = null;
+
+// Load layout from DeskThing settings
+const loadLayoutFromSettings = async (): Promise<LayoutConfig> => {
+  try {
+    const settings = await DeskThing.getSettings();
+    const layoutSetting = (settings as Record<string, unknown>)?.layout as
+      | { value?: string }
+      | undefined;
+
+    if (typeof layoutSetting?.value === "string") {
+      try {
+        return JSON.parse(layoutSetting.value) as LayoutConfig;
+      } catch {
+        return createEmptyLayout();
+      }
+    }
+    return createEmptyLayout();
+  } catch (error) {
+    console.error("[HA] Failed to load layout from settings:", error);
+    return createEmptyLayout();
+  }
+};
+
+// Send layout to client
+const sendLayoutToClient = async () => {
+  const layout = await loadLayoutFromSettings();
+  console.log(
+    "[HA] Sending layout to client:",
+    `${layout.grid.rows}x${layout.grid.cols} grid,`,
+    `${layout.items.filter((i) => i.position).length} positioned items`
+  );
+  DeskThing.send({
+    type: "LAYOUT_CONFIG",
+    payload: layout,
+  });
+};
 
 const start = async () => {
   console.log("[HA] Starting Home Assistant app...");
@@ -33,8 +71,13 @@ const start = async () => {
   }).start();
 
   // Start the config server for entity layout configuration
-  configServer = createConfigServer(() => systemActor.getSnapshot());
-  configServer.start();
+  try {
+    configServer = createConfigServer(() => systemActor.getSnapshot());
+    configServer.start();
+  } catch (error) {
+    console.error("[HA] Failed to start config server:", error);
+    // Don't crash the main app if config server fails to start
+  }
 
   systemActor.subscribe((state) => {
     const status = normalizeSystemStateValue(state);
@@ -47,7 +90,7 @@ const start = async () => {
 
   console.log("[HA Server] Registering 'get' handler for status requests");
 
-  DeskThing.on("get", (socket: SocketData) => {
+  DeskThing.on("get", async (socket: SocketData) => {
     console.log("[HA Server] Received 'get' request:", JSON.stringify(socket));
 
     if (socket.request === "status") {
@@ -60,11 +103,24 @@ const start = async () => {
         payload: status,
       });
     }
+
+    // Handle CLIENT_CONNECTED - send layout to client
+    const payload = socket.payload as { type?: string } | undefined;
+    if (payload?.type === "CLIENT_CONNECTED") {
+      console.log("[HA Server] Client connected, sending layout...");
+      await sendLayoutToClient();
+    }
   });
 };
 
 const stop = async () => {
-  // Do nothing yet...
+  console.log("[HA] Stopping Home Assistant app...");
+
+  // Stop the config server to release the port
+  if (configServer) {
+    configServer.stop();
+    configServer = null;
+  }
 };
 
 // Main Entrypoint of the server
