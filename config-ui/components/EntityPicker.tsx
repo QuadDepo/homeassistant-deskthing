@@ -1,4 +1,12 @@
-import { useState, useMemo, useRef, useCallback, useImperativeHandle, forwardRef, memo } from "react";
+import {
+  useState,
+  useMemo,
+  useRef,
+  useCallback,
+  useImperativeHandle,
+  forwardRef,
+  memo,
+} from "react";
 import { cva, cx } from "class-variance-authority";
 import Icon from "@mdi/react";
 import { mdiClose, mdiMagnify } from "@mdi/js";
@@ -38,7 +46,7 @@ const filterButtonStyles = cva(
 
 const EntityPicker = forwardRef<EntityPickerRef, Props>(function EntityPicker(
   { onSelect },
-  ref
+  ref,
 ) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [search, setSearch] = useState("");
@@ -68,7 +76,7 @@ const EntityPicker = forwardRef<EntityPickerRef, Props>(function EntityPicker(
         handleClose();
       }
     },
-    [targetCell, onSelect, handleClose]
+    [targetCell, onSelect, handleClose],
   );
 
   const { domains, domainCounts } = useMemo(() => {
@@ -107,7 +115,7 @@ const EntityPicker = forwardRef<EntityPickerRef, Props>(function EntityPicker(
   return (
     <dialog
       ref={dialogRef}
-      className="bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden border border-white/10 backdrop:bg-black/80 backdrop:backdrop-blur-sm"
+      className="hidden open:flex open:flex-col bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden border border-white/10 backdrop:bg-black/80 backdrop:backdrop-blur-sm"
       onClick={(e) => {
         // Close on backdrop click (clicking the dialog element itself, not its children)
         if (e.target === dialogRef.current) {
@@ -120,7 +128,8 @@ const EntityPicker = forwardRef<EntityPickerRef, Props>(function EntityPicker(
         <div>
           <h2 className="text-lg font-semibold text-white">Add Entity</h2>
           <p className="text-sm text-white/50">
-            Position: Row {(targetCell?.row ?? 0) + 1}, Column {(targetCell?.col ?? 0) + 1}
+            Position: Row {(targetCell?.row ?? 0) + 1}, Column{" "}
+            {(targetCell?.col ?? 0) + 1}
           </p>
         </div>
         <button
@@ -131,71 +140,71 @@ const EntityPicker = forwardRef<EntityPickerRef, Props>(function EntityPicker(
         </button>
       </div>
 
-        {/* Search */}
-        <div className="p-4 border-b border-white/10">
-          <div className="relative">
-            <Icon
-              path={mdiMagnify}
-              size={0.9}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
-            />
-            <input
-              type="text"
-              placeholder="Search entities..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
-              autoFocus
-            />
-          </div>
+      {/* Search */}
+      <div className="p-4 border-b border-white/10">
+        <div className="relative">
+          <Icon
+            path={mdiMagnify}
+            size={0.9}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
+          />
+          <input
+            type="text"
+            placeholder="Search entities..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+            autoFocus
+          />
         </div>
+      </div>
 
-        {/* Domain filters */}
-        <div className="px-4 py-3 flex-shrink-0 border-b border-white/10 overflow-x-auto">
-          <div className="flex gap-2 min-w-max">
+      {/* Domain filters */}
+      <div className="px-4 py-3 flex-shrink-0 border-b border-white/10 overflow-x-auto">
+        <div className="flex gap-2 min-w-max">
+          <button
+            onClick={() => setSelectedDomain(null)}
+            className={cx(
+              filterButtonStyles({ active: selectedDomain === null }),
+            )}
+          >
+            All ({availableEntities.length})
+          </button>
+          {domains.map((domain) => (
             <button
-              onClick={() => setSelectedDomain(null)}
+              key={domain}
+              onClick={() => setSelectedDomain(domain)}
               className={cx(
-                filterButtonStyles({ active: selectedDomain === null }),
+                filterButtonStyles({ active: selectedDomain === domain }),
               )}
             >
-              All ({availableEntities.length})
+              {domainLabels[domain] || domain} ({domainCounts.get(domain)})
             </button>
-            {domains.map((domain) => (
-              <button
-                key={domain}
-                onClick={() => setSelectedDomain(domain)}
-                className={cx(
-                  filterButtonStyles({ active: selectedDomain === domain }),
-                )}
-              >
-                {domainLabels[domain] || domain} ({domainCounts.get(domain)})
-              </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Entity list */}
+      <div className="flex-1 overflow-y-auto p-2">
+        {filteredEntities.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-white/50">
+            <p>No entities found</p>
+            {search && (
+              <p className="text-sm mt-1">Try a different search term</p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {filteredEntities.map((entity) => (
+              <EntityRow
+                key={entity.entity_id}
+                entity={entity}
+                onSelect={() => handleSelect(entity.entity_id)}
+              />
             ))}
           </div>
-        </div>
-
-        {/* Entity list */}
-        <div className="flex-1 overflow-y-auto p-2">
-          {filteredEntities.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-white/50">
-              <p>No entities found</p>
-              {search && (
-                <p className="text-sm mt-1">Try a different search term</p>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {filteredEntities.map((entity) => (
-                <EntityRow
-                  key={entity.entity_id}
-                  entity={entity}
-                  onSelect={() => handleSelect(entity.entity_id)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        )}
+      </div>
     </dialog>
   );
 });
@@ -205,7 +214,10 @@ interface EntityRowProps {
   onSelect: () => void;
 }
 
-const EntityRow = memo(function EntityRow({ entity, onSelect }: EntityRowProps) {
+const EntityRow = memo(function EntityRow({
+  entity,
+  onSelect,
+}: EntityRowProps) {
   const iconPath = domainIcons[entity.domain] || defaultIcon;
 
   return (
