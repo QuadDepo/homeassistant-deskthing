@@ -145,7 +145,7 @@ const App: FC = () => {
   }, [layout]);
 
   // Convert EntitySize to size string for components (e.g., "2x3")
-  const sizeToString = (size?: EntitySize): "1x1" | "1x2" | "2x1" | "2x2" | "3x3" | string => {
+  const sizeToString = (size?: EntitySize): `${number}x${number}` => {
     if (!size) return "1x1";
     return `${size.rowSpan}x${size.colSpan}`;
   };
