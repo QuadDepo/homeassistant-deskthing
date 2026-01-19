@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, type RefObject } from "react";
 import type { LayoutItem } from "../../../shared/types/grid";
 import { positionKey, buildOccupancyMap } from "../../../shared/utils/grid";
 import type { EntityWithLayout } from "../../stores/configStore";
@@ -41,7 +41,11 @@ const GridCells = memo(function GridCells({
           // Check if this is the primary cell (top-left) of the entity
           const entity = gridEntities.get(key);
 
-          if (entity && entity.position?.row === row && entity.position?.col === col) {
+          if (
+            entity &&
+            entity.position?.row === row &&
+            entity.position?.col === col
+          ) {
             result.push(
               <EntityCell
                 key={key}
@@ -51,25 +55,28 @@ const GridCells = memo(function GridCells({
                 removeFromGrid={removeFromGrid}
                 onResizeStart={onResizeStart}
                 isResizing={resizingEntityId === entity.entity_id}
-              />
+              />,
             );
           }
           // Skip secondary cells - they're visually covered by the spanning entity
         } else {
           result.push(
-            <EmptyCell
-              key={key}
-              row={row}
-              col={col}
-              onAddClick={onAddClick}
-            />
+            <EmptyCell key={key} row={row} col={col} onAddClick={onAddClick} />,
           );
         }
       }
     }
 
     return result;
-  }, [gridConfig, gridEntities, items, removeFromGrid, onResizeStart, resizingEntityId, onAddClick]);
+  }, [
+    gridConfig,
+    gridEntities,
+    items,
+    removeFromGrid,
+    onResizeStart,
+    resizingEntityId,
+    onAddClick,
+  ]);
 
   return <>{cells}</>;
 });

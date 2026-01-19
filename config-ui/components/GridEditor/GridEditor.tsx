@@ -1,8 +1,18 @@
 import { useCallback, useRef, useMemo } from "react";
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { DEFAULT_SIZE } from "../../../shared/types/grid";
 import type { GridPosition } from "../../../shared/types/grid";
-import { useConfigStore, useGridConfig, useGridEntities } from "../../stores/configStore";
+import {
+  useConfigStore,
+  useGridConfig,
+  useGridEntities,
+} from "../../stores/configStore";
 import { useResize } from "../../hooks/useResize";
 import { useDrag } from "../../hooks/useDrag";
 import EntityPicker, { type EntityPickerRef } from "../EntityPicker";
@@ -26,7 +36,11 @@ const GridEditor = () => {
 
   const gridRef = useRef<HTMLDivElement>(null);
 
-  const { overlayData, hoveredCell, handlers: dragHandlers } = useDrag({
+  const {
+    overlayData,
+    hoveredCell,
+    handlers: dragHandlers,
+  } = useDrag({
     gridRef,
     gridConfig,
     moveEntity,
@@ -57,7 +71,7 @@ const GridEditor = () => {
     (entityId: string, position: GridPosition) => {
       placeEntity(entityId, position.row, position.col);
     },
-    [placeEntity]
+    [placeEntity],
   );
 
   const resizingEntityId = resizingEntity?.entityId ?? null;
@@ -66,6 +80,9 @@ const GridEditor = () => {
     () => ({
       gridTemplateColumns: `repeat(${gridConfig.cols}, minmax(0, 1fr))`,
       gridTemplateRows: `repeat(${gridConfig.rows}, minmax(0, 1fr))`,
+      // Set aspect ratio based on grid dimensions to maintain proper proportions
+      // and prevent row collapse when full grid is occupied by a single entity
+      aspectRatio: `${gridConfig.cols} / ${gridConfig.rows}`,
     }),
     [gridConfig.cols, gridConfig.rows],
   );
@@ -110,7 +127,6 @@ const GridEditor = () => {
             />
           </div>
 
-          {/* Resize preview overlay */}
           {resizingEntity && resizeStateRef.current && (
             <ResizePreview
               entityId={resizingEntity.entityId}
@@ -120,7 +136,6 @@ const GridEditor = () => {
             />
           )}
 
-          {/* Drop preview overlay for multi-cell entities */}
           {overlayData && (
             <DropPreview
               targetRow={hoveredCell?.row ?? null}
@@ -146,12 +161,6 @@ const GridEditor = () => {
         </DragOverlay>
       </DndContext>
 
-      {/* Helper text */}
-      <p className="text-center text-xs text-white/40">
-        This preview matches your DeskThing display layout
-      </p>
-
-      {/* Entity picker modal */}
       <EntityPicker ref={pickerRef} onSelect={handleEntitySelected} />
     </div>
   );
