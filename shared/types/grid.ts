@@ -3,6 +3,16 @@ export interface GridPosition {
   col: number;
 }
 
+export interface EntitySize {
+  rowSpan: number;
+  colSpan: number;
+}
+
+export const DEFAULT_SIZE: EntitySize = {
+  rowSpan: 1,
+  colSpan: 1,
+};
+
 export interface GridConfig {
   rows: number;
   cols: number;
@@ -12,6 +22,7 @@ export interface LayoutItem {
   entityId: string;
   enabled: boolean;
   position?: GridPosition;
+  size?: EntitySize;
 }
 
 export interface LayoutConfig {
