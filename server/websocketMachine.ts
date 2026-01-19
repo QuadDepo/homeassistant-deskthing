@@ -6,7 +6,7 @@ import {
   HassEntities,
 } from "home-assistant-js-websocket";
 import { assign, EventObject, fromCallback, fromPromise, setup } from "xstate";
-import { subscribeEntities } from "./utils/subscribeEntities.js";
+import { subscribeEntities } from "./utils/subscribeEntities";
 import WebSocket from "ws";
 import { DeskThing } from "@deskthing/server";
 

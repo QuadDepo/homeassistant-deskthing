@@ -2,18 +2,16 @@ import { cva, cx } from "class-variance-authority";
 import { positionToTailwindClass } from "../../utils/positionToTailwindClass";
 import Icon from "@mdi/react";
 
-type Size = "1x1" | "1x2" | "2x1" | "2x2" | "3x3";
-
 type Props = {
   name: string;
   isActive: boolean;
   isPending?: boolean;
   iconPath: string;
-  size?: Size;
+  size?: string;
   onClick?: () => void;
 };
 
-const entityStyles = cva(["rounded-xl", "bg-white/70"], {
+const entityStyles = cva(["rounded-xl", "bg-white/70", "h-full", "w-full"], {
   variants: {
     active: {
       true: ["opacity-100"],

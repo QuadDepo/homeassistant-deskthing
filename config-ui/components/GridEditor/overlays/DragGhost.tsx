@@ -1,0 +1,42 @@
+import { memo } from "react";
+import { cx } from "class-variance-authority";
+import Icon from "@mdi/react";
+import { DEFAULT_SIZE } from "../../../../shared/types/grid";
+import { domainIcons, defaultIcon } from "../../../utils/domainIcons";
+import { GRID_GAP } from "../../../utils/gridUtils";
+import { cellStyles } from "../styles";
+import type { EntityWithLayout } from "../../../stores/configStore";
+
+export interface DragGhostProps {
+  entity: EntityWithLayout;
+  cellWidth: number;
+  cellHeight: number;
+}
+
+const DragGhost = memo(function DragGhost({
+  entity,
+  cellWidth,
+  cellHeight,
+}: DragGhostProps) {
+  const iconPath = domainIcons[entity.domain] || defaultIcon;
+  const size = entity.size || DEFAULT_SIZE;
+
+  const width = cellWidth * size.colSpan + GRID_GAP * (size.colSpan - 1);
+  const height = cellHeight * size.rowSpan + GRID_GAP * (size.rowSpan - 1);
+
+  return (
+    <div
+      style={{ width, height }}
+      className={cx(cellStyles({ isEmpty: false }), "shadow-xl scale-105")}
+    >
+      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/10 mb-1">
+        <Icon path={iconPath} size={1} className="text-white/80" />
+      </div>
+      <div className="text-white text-xs font-medium text-center truncate w-full px-1">
+        {entity.friendly_name}
+      </div>
+    </div>
+  );
+});
+
+export default DragGhost;

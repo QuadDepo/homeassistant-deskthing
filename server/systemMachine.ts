@@ -10,14 +10,14 @@ import {
   setup,
   SnapshotFrom,
 } from "xstate";
-import { getHomeAssistantStates } from "./utils/getHomeAssistantStates.js";
-import websocketMachine from "./websocketMachine.js";
+import { getHomeAssistantStates } from "./utils/getHomeAssistantStates";
+import websocketMachine from "./websocketMachine";
 import {
   createBasicSettings,
   createEntitySetting,
-} from "./utils/createSettings.js";
+} from "./utils/createSettings";
 import { SocketData } from "@deskthing/types";
-import { normalizeSettings } from "./utils/normalizeSettings.js";
+import { normalizeSettings } from "./utils/normalizeSettings";
 import { DeskThing } from "@deskthing/server";
 
 const getAllEntities = fromPromise<

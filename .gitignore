@@ -8,6 +8,7 @@
 # misc
 .DS_Store
 *.pem
+*.tsbuildinfo
 
 # logs
 npm-debug.log*

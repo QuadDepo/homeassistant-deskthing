@@ -5,7 +5,7 @@ import EntityCard from "./EntityCard";
 
 type Props = {
   entityId: string;
-  size?: "1x1" | "1x2" | "2x1" | "2x2" | "3x3";
+  size?: string;
 };
 
 const LightEntity = ({ entityId, size = "1x1" }: Props) => {
