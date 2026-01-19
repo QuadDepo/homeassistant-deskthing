@@ -1,20 +1,26 @@
 import { useCallback, useEffect, useRef, RefObject } from "react";
-import type { EntitySize, LayoutItem } from "../../shared/types/grid";
+import type { EntitySize, GridConfig, LayoutItem } from "../../shared/types/grid";
 import { DEFAULT_SIZE } from "../../shared/types/grid";
 import { GRID_GAP } from "../utils/gridUtils";
+import { useLatest } from "./useLatest";
 
-interface ResizeState {
-  entityId: string;
-  startX: number;
-  startY: number;
-  startSize: EntitySize;
-  cellWidth: number;
-  cellHeight: number;
-}
+type ResizeState =
+  | { status: "idle" }
+  | {
+      status: "resizing";
+      entityId: string;
+      startX: number;
+      startY: number;
+      startSize: EntitySize;
+      cellWidth: number;
+      cellHeight: number;
+    };
+
+const IDLE_RESIZE_STATE: ResizeState = { status: "idle" };
 
 interface UseResizeOptions {
   gridRef: RefObject<HTMLDivElement | null>;
-  gridConfig: { rows: number; cols: number };
+  gridConfig: GridConfig;
   items: LayoutItem[];
   resizeEntity: (entityId: string, newSize: EntitySize) => void;
   setResizingEntity: (value: { entityId: string; previewSize: EntitySize } | null) => void;
@@ -29,10 +35,7 @@ export function useResize({
   setResizingEntity,
   resizingEntity,
 }: UseResizeOptions) {
-  // Use ref for resize state to avoid re-renders during drag
-  const resizeStateRef = useRef<ResizeState | null>(null);
-  // Keep a state version just for the isResizing check (only changes on start/end)
-  const isResizingRef = useRef(false);
+  const resizeStateRef = useRef<ResizeState>(IDLE_RESIZE_STATE);
 
   const handleResizeStart = useCallback((entityId: string, e: React.MouseEvent) => {
     const item = items.find((i) => i.entityId === entityId);
@@ -48,6 +51,7 @@ export function useResize({
     const cellHeight = (rect.height - totalGapHeight) / gridConfig.rows;
 
     resizeStateRef.current = {
+      status: "resizing",
       entityId,
       startX: e.clientX,
       startY: e.clientY,
@@ -55,24 +59,16 @@ export function useResize({
       cellWidth,
       cellHeight,
     };
-    isResizingRef.current = true;
   }, [items, gridConfig, gridRef]);
 
-  // Use refs for handlers to avoid effect re-subscription
-  const resizeEntityRef = useRef(resizeEntity);
-  const setResizingEntityRef = useRef(setResizingEntity);
-  const resizingEntityRef = useRef(resizingEntity);
-
-  useEffect(() => {
-    resizeEntityRef.current = resizeEntity;
-    setResizingEntityRef.current = setResizingEntity;
-    resizingEntityRef.current = resizingEntity;
-  }, [resizeEntity, setResizingEntity, resizingEntity]);
+  const resizeEntityRef = useLatest(resizeEntity);
+  const setResizingEntityRef = useLatest(setResizingEntity);
+  const resizingEntityRef = useLatest(resizingEntity);
 
   useEffect(() => {
     const handleResizeMove = (e: MouseEvent) => {
       const resizeState = resizeStateRef.current;
-      if (!resizeState) return;
+      if (resizeState.status !== "resizing") return;
 
       const deltaX = e.clientX - resizeState.startX;
       const deltaY = e.clientY - resizeState.startY;
@@ -92,16 +88,14 @@ export function useResize({
       const resizeState = resizeStateRef.current;
       const currentResizingEntity = resizingEntityRef.current;
 
-      if (!resizeState || !currentResizingEntity) {
-        resizeStateRef.current = null;
-        isResizingRef.current = false;
+      if (resizeState.status !== "resizing" || !currentResizingEntity) {
+        resizeStateRef.current = IDLE_RESIZE_STATE;
         setResizingEntityRef.current(null);
         return;
       }
 
       resizeEntityRef.current(resizeState.entityId, currentResizingEntity.previewSize);
-      resizeStateRef.current = null;
-      isResizingRef.current = false;
+      resizeStateRef.current = IDLE_RESIZE_STATE;
     };
 
     window.addEventListener("mousemove", handleResizeMove);
@@ -111,17 +105,14 @@ export function useResize({
       window.removeEventListener("mousemove", handleResizeMove);
       window.removeEventListener("mouseup", handleResizeEnd);
 
-      // Clean up resize state if component unmounts during active resize
-      if (resizeStateRef.current) {
-        resizeStateRef.current = null;
-        isResizingRef.current = false;
+      if (resizeStateRef.current.status === "resizing") {
+        resizeStateRef.current = IDLE_RESIZE_STATE;
         setResizingEntityRef.current(null);
       }
     };
   }, []);
 
   return {
-    isResizingRef,
     resizeStateRef,
     handleResizeStart,
   };
