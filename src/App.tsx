@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useState, useMemo } from "react";
 import { SocketData } from "@deskthing/types";
 import DeskThing from "./Deskthing";
 import { useEntityStore, useGridCells, useGridConfig } from "./stores/entityStore";
@@ -7,6 +7,7 @@ import Grid from "./components/grid/Grid";
 import LightEntity from "./components/entity/LightEntity";
 import Startup from "./components/startup/Startup";
 import { type HassEntities } from "home-assistant-js-websocket";
+import type { EntitySize } from "../shared";
 
 console.log("[HA Client] App.tsx module loaded");
 
@@ -66,6 +67,7 @@ const App: FC = () => {
           entityId: string;
           enabled?: boolean;
           position?: { row: number; col: number };
+          size?: { rowSpan: number; colSpan: number };
         }>;
       } | undefined;
       if (rawLayout) {
@@ -103,12 +105,58 @@ const App: FC = () => {
     };
   }, [isConnected, updateEntities, updateLayout]);
 
-  const renderEntity = (entityId: string) => {
+  const layout = useEntityStore((state) => state.layout);
+
+  // Build a map to quickly look up layout items by their primary position
+  const layoutItemsByPosition = useMemo(() => {
+    const map = new Map<string, { entityId: string; size?: EntitySize }>();
+    if (layout?.items) {
+      for (const item of layout.items) {
+        if (item.position) {
+          const key = `${item.position.row}-${item.position.col}`;
+          map.set(key, { entityId: item.entityId, size: item.size });
+        }
+      }
+    }
+    return map;
+  }, [layout]);
+
+  // Build a set of cells that are spanned by multi-cell entities (excluding primary position)
+  const spannedCells = useMemo(() => {
+    const set = new Set<string>();
+    if (layout?.items) {
+      for (const item of layout.items) {
+        if (item.position && item.size) {
+          const { rowSpan, colSpan } = item.size;
+          if (rowSpan > 1 || colSpan > 1) {
+            // Add all cells except the primary position
+            for (let r = 0; r < rowSpan; r++) {
+              for (let c = 0; c < colSpan; c++) {
+                if (r === 0 && c === 0) continue; // Skip primary position
+                const key = `${item.position.row + r}-${item.position.col + c}`;
+                set.add(key);
+              }
+            }
+          }
+        }
+      }
+    }
+    return set;
+  }, [layout]);
+
+  // Convert EntitySize to size string for components (e.g., "2x3")
+  const sizeToString = (size?: EntitySize): "1x1" | "1x2" | "2x1" | "2x2" | "3x3" | string => {
+    if (!size) return "1x1";
+    return `${size.rowSpan}x${size.colSpan}`;
+  };
+
+  const renderEntity = (entityId: string, size?: EntitySize) => {
     const domain = getEntityDomain(entityId);
+    const sizeString = sizeToString(size);
 
     switch (domain) {
       case "light":
-        return <LightEntity entityId={entityId} />;
+        return <LightEntity entityId={entityId} size={sizeString} />;
       // Future entity types will be added here
       default:
         return null;
@@ -116,13 +164,33 @@ const App: FC = () => {
   };
 
   const renderCell = (cell: { entityId: string | null; row: number; col: number }) => {
+    const posKey = `${cell.row}-${cell.col}`;
+
+    // Skip cells that are spanned by multi-cell entities
+    if (spannedCells.has(posKey)) {
+      return null;
+    }
+
     if (!cell.entityId) {
       // Empty cell - render placeholder to preserve grid position
       return <div key={`empty-${cell.row}-${cell.col}`} />;
     }
+
+    // Get the layout item for this cell to check size
+    const layoutItem = layoutItemsByPosition.get(posKey);
+    const size = layoutItem?.size;
+
+    // Apply grid spanning styles for multi-cell entities
+    const spanStyle = size && (size.rowSpan > 1 || size.colSpan > 1)
+      ? {
+          gridRow: `span ${size.rowSpan}`,
+          gridColumn: `span ${size.colSpan}`,
+        }
+      : undefined;
+
     return (
-      <div key={`cell-${cell.row}-${cell.col}`}>
-        {renderEntity(cell.entityId)}
+      <div key={`cell-${cell.row}-${cell.col}`} style={spanStyle}>
+        {renderEntity(cell.entityId, size)}
       </div>
     );
   };
