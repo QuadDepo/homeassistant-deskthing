@@ -1,8 +1,12 @@
 import { ReactNode } from "react";
 
-const ROWS = 3;
+interface GridProps {
+	children: ReactNode;
+	rows?: number;
+	cols?: number;
+}
 
-const Grid = ({ children }: { children: ReactNode }) => {
+const Grid = ({ children, rows = 3, cols = 5 }: GridProps) => {
 	return (
 		<div className="w-full h-full">
 			<div className="w-full overflow-x-auto scroll-px-4 h-full snap-x p-4 snap-mandatory">
@@ -10,10 +14,9 @@ const Grid = ({ children }: { children: ReactNode }) => {
 					className="grid gap-4 w-fit h-full"
 					style={{
 						display: "grid",
-						gridTemplateRows: `repeat(${ROWS}, 1fr)`,
-						gridTemplateColumns: "repeat(6, 150px)",
-						gridAutoColumns: "150px",
-						gridAutoFlow: "column dense",
+						gridTemplateRows: `repeat(${rows}, 1fr)`,
+						gridTemplateColumns: `repeat(${cols}, 150px)`,
+						// No gridAutoFlow - cells are rendered in order with gaps preserved
 					}}
 				>
 					{children}
