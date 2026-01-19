@@ -1,18 +1,10 @@
 import { create } from "zustand";
 import { HassEntities } from "home-assistant-js-websocket";
 import { DeskThing } from "@deskthing/client";
+import type { GridConfig, LayoutConfig, GridCellData } from "../../shared";
+import { DEFAULT_GRID, buildPositionMap, generateGridCells } from "../../shared";
 
 const deskthing = DeskThing;
-
-interface LayoutItem {
-  entityId: string;
-  enabled: boolean;
-}
-
-interface LayoutConfig {
-  version: 1;
-  items: LayoutItem[];
-}
 
 interface EntityStore {
   entities: HassEntities;
@@ -46,7 +38,7 @@ export const useEntityStore = create<EntityStore>((set) => ({
   },
 }));
 
-// Selector to get entity IDs in layout order (only enabled entities)
+// Selector to get entity IDs in layout order (only entities with positions)
 export const useOrderedEntityIds = () => {
   const entities = useEntityStore((state) => state.entities);
   const layout = useEntityStore((state) => state.layout);
@@ -58,8 +50,29 @@ export const useOrderedEntityIds = () => {
     return allEntityIds;
   }
 
-  // Get ordered IDs from layout, only including enabled entities that exist
+  // Get ordered IDs from layout, only including entities with positions that exist
   return layout.items
-    .filter((item) => item.enabled && item.entityId in entities)
+    .filter((item) => item.position && item.entityId in entities)
     .map((item) => item.entityId);
+};
+
+// Get grid configuration
+export const useGridConfig = (): GridConfig => {
+  const layout = useEntityStore((state) => state.layout);
+  return layout?.grid || DEFAULT_GRID;
+};
+
+// Get the full grid with entity IDs at their positions (including empty cells)
+export const useGridCells = (): GridCellData[] => {
+  const entities = useEntityStore((state) => state.entities);
+  const layout = useEntityStore((state) => state.layout);
+  const grid = layout?.grid || DEFAULT_GRID;
+
+  // Build a map of position -> entityId (only include entities that exist)
+  const existingEntityIds = new Set(Object.keys(entities));
+  const positionMap = layout
+    ? buildPositionMap(layout.items, existingEntityIds)
+    : new Map<string, string>();
+
+  return generateGridCells(grid, positionMap);
 };
