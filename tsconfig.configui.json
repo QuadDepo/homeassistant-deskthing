@@ -13,5 +13,5 @@
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true
   },
-  "include": ["config-ui", "server/configServer/types.ts"]
+  "include": ["config-ui", "shared", "server/configServer/types.ts"]
 }
