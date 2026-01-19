@@ -5,13 +5,13 @@ import Icon from "@mdi/react";
 import { mdiPlus } from "@mdi/js";
 import { cellStyles } from "../styles";
 
-export interface DroppableCellProps {
+export interface EmptyCellProps {
   row: number;
   col: number;
   onAddClick: (row: number, col: number) => void;
 }
 
-const DroppableCell = memo(function DroppableCell({ row, col, onAddClick }: DroppableCellProps) {
+const EmptyCell = memo(function EmptyCell({ row, col, onAddClick }: EmptyCellProps) {
   const id = `${row}-${col}`;
   const { setNodeRef, isOver } = useDroppable({
     id,
@@ -38,4 +38,4 @@ const DroppableCell = memo(function DroppableCell({ row, col, onAddClick }: Drop
   );
 });
 
-export default DroppableCell;
+export default EmptyCell;

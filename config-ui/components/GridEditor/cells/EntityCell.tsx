@@ -8,7 +8,7 @@ import { domainIcons, defaultIcon } from "../../../utils/domainIcons";
 import { cellStyles } from "../styles";
 import type { EntityWithLayout } from "../../../stores/configStore";
 
-export interface DraggableCellProps {
+export interface EntityCellProps {
   row: number;
   col: number;
   entity: EntityWithLayout;
@@ -17,14 +17,14 @@ export interface DraggableCellProps {
   isResizing: boolean;
 }
 
-const DraggableCell = memo(function DraggableCell({
+const EntityCell = memo(function EntityCell({
   row,
   col,
   entity,
   removeFromGrid,
   onResizeStart,
   isResizing,
-}: DraggableCellProps) {
+}: EntityCellProps) {
   const id = `${row}-${col}`;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id,
@@ -98,4 +98,4 @@ const DraggableCell = memo(function DraggableCell({
   );
 });
 
-export default DraggableCell;
+export default EntityCell;

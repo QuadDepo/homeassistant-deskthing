@@ -7,17 +7,17 @@ import { GRID_GAP } from "../../../utils/gridUtils";
 import { cellStyles } from "../styles";
 import type { EntityWithLayout } from "../../../stores/configStore";
 
-export interface DragOverlayContentProps {
+export interface DragGhostProps {
   entity: EntityWithLayout;
   cellWidth: number;
   cellHeight: number;
 }
 
-const DragOverlayContent = memo(function DragOverlayContent({
+const DragGhost = memo(function DragGhost({
   entity,
   cellWidth,
   cellHeight,
-}: DragOverlayContentProps) {
+}: DragGhostProps) {
   const iconPath = domainIcons[entity.domain] || defaultIcon;
   const size = entity.size || DEFAULT_SIZE;
 
@@ -39,4 +39,4 @@ const DragOverlayContent = memo(function DragOverlayContent({
   );
 });
 
-export default DragOverlayContent;
+export default DragGhost;
