@@ -1,16 +1,16 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { CONFIG_SERVER_PORTS, VITE_DEV_PORTS } from "./shared/config";
 
 export default defineConfig({
   root: "./config-ui",
   base: "./",
   plugins: [react()],
   server: {
-    port: 8766,
+    port: VITE_DEV_PORTS.configUi,
     proxy: {
       "/api": {
-        // Dev server runs on 8767, production on 8765
-        target: "http://localhost:8767",
+        target: `http://localhost:${CONFIG_SERVER_PORTS.development}`,
         changeOrigin: true,
       },
     },
