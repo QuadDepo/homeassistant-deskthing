@@ -1,5 +1,7 @@
 import { create } from "zustand";
-import type { EntityInfo, LayoutConfig, LayoutItem } from "../../server/configServer/types";
+import type { LayoutConfig, GridPosition, GridConfig } from "../../shared";
+import { DEFAULT_GRID, positionKey, isPositionOccupied } from "../../shared";
+import type { EntityInfo } from "../../server/configServer/types";
 import {
   fetchEntities,
   fetchLayout,
@@ -20,15 +22,16 @@ interface ConfigStore {
 
   // Actions
   loadData: () => Promise<void>;
-  toggleEntity: (entityId: string) => void;
-  reorderEntities: (fromIndex: number, toIndex: number) => void;
+  placeEntity: (entityId: string, row: number, col: number) => void;
+  removeFromGrid: (row: number, col: number) => void;
+  moveEntity: (fromRow: number, fromCol: number, toRow: number, toCol: number) => void;
   saveLayout: () => Promise<void>;
 }
 
 export const useConfigStore = create<ConfigStore>((set, get) => ({
   // Initial state
   allEntities: [],
-  layout: { version: 1, items: [] },
+  layout: { version: 1, grid: DEFAULT_GRID, items: [] },
   isLoading: false,
   isSaving: false,
   isDirty: false,
@@ -48,14 +51,35 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
       const selectedEntityIds = new Set(selectedRes.selectedEntityIds);
       let layout = layoutRes.layout;
 
-      // Build complete layout from all entities
-      // If we have an existing layout, preserve its order and enabled states
-      // Otherwise, initialize with all entities (selected ones enabled)
-      if (layout.items.length > 0) {
-        // Existing layout - ensure all entities are included
-        const existingIds = new Set(layout.items.map((item) => item.entityId));
+      // Ensure layout has grid config
+      if (!layout.grid) {
+        layout = { ...layout, grid: DEFAULT_GRID };
+      }
 
-        // Add any new entities that aren't in the layout yet
+      // Migrate old layouts: if items exist without positions, place them on grid
+      if (layout.items.length > 0) {
+        const hasPositions = layout.items.some((item) => item.position);
+        if (!hasPositions) {
+          // Migrate: place enabled items on grid in order
+          let row = 0;
+          let col = 0;
+          const migratedItems = layout.items.map((item) => {
+            if (item.enabled) {
+              const position = { row, col };
+              col++;
+              if (col >= layout.grid.cols) {
+                col = 0;
+                row++;
+              }
+              return { ...item, position };
+            }
+            return item;
+          });
+          layout = { ...layout, items: migratedItems };
+        }
+
+        // Ensure all entities are in layout
+        const existingIds = new Set(layout.items.map((item) => item.entityId));
         const newEntities = allEntities
           .filter((e) => !existingIds.has(e.entity_id))
           .map((e) => ({
@@ -63,19 +87,40 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
             enabled: false,
           }));
 
-        layout = {
-          ...layout,
-          items: [...layout.items, ...newEntities],
-        };
+        if (newEntities.length > 0) {
+          layout = {
+            ...layout,
+            items: [...layout.items, ...newEntities],
+          };
+        }
       } else {
         // No existing layout - create from all entities
-        // Previously selected entities are enabled, others are disabled
+        // Place previously selected entities on grid
+        let row = 0;
+        let col = 0;
         layout = {
           version: 1,
-          items: allEntities.map((entity) => ({
-            entityId: entity.entity_id,
-            enabled: selectedEntityIds.has(entity.entity_id),
-          })),
+          grid: DEFAULT_GRID,
+          items: allEntities.map((entity) => {
+            const isSelected = selectedEntityIds.has(entity.entity_id);
+            if (isSelected) {
+              const position = { row, col };
+              col++;
+              if (col >= DEFAULT_GRID.cols) {
+                col = 0;
+                row++;
+              }
+              return {
+                entityId: entity.entity_id,
+                enabled: true,
+                position,
+              };
+            }
+            return {
+              entityId: entity.entity_id,
+              enabled: false,
+            };
+          }),
         };
       }
 
@@ -92,10 +137,18 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
     }
   },
 
-  toggleEntity: (entityId: string) => {
+  placeEntity: (entityId: string, row: number, col: number) => {
     set((state) => {
+      // Check if position is already occupied
+      const isOccupied = state.layout.items.some(
+        (item) => item.position?.row === row && item.position?.col === col
+      );
+      if (isOccupied) return state;
+
       const items = state.layout.items.map((item) =>
-        item.entityId === entityId ? { ...item, enabled: !item.enabled } : item
+        item.entityId === entityId
+          ? { ...item, enabled: true, position: { row, col } }
+          : item
       );
 
       return {
@@ -105,11 +158,34 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
     });
   },
 
-  reorderEntities: (fromIndex: number, toIndex: number) => {
+  removeFromGrid: (row: number, col: number) => {
     set((state) => {
-      const items = [...state.layout.items];
-      const [moved] = items.splice(fromIndex, 1);
-      items.splice(toIndex, 0, moved);
+      const items = state.layout.items.map((item) =>
+        item.position?.row === row && item.position?.col === col
+          ? { ...item, enabled: false, position: undefined }
+          : item
+      );
+
+      return {
+        layout: { ...state.layout, items },
+        isDirty: true,
+      };
+    });
+  },
+
+  moveEntity: (fromRow: number, fromCol: number, toRow: number, toCol: number) => {
+    set((state) => {
+      // Check if target position is already occupied
+      const isOccupied = state.layout.items.some(
+        (item) => item.position?.row === toRow && item.position?.col === toCol
+      );
+      if (isOccupied) return state;
+
+      const items = state.layout.items.map((item) =>
+        item.position?.row === fromRow && item.position?.col === fromCol
+          ? { ...item, position: { row: toRow, col: toCol } }
+          : item
+      );
 
       return {
         layout: { ...state.layout, items },
@@ -137,33 +213,86 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
 // Entity with layout info combined
 export interface EntityWithLayout extends EntityInfo {
   enabled: boolean;
-  index: number;
+  position?: GridPosition;
 }
 
-// Selector to get all entities with their layout info
-export const useEntitiesWithLayout = (): EntityWithLayout[] => {
+// Get entity at a specific grid position
+export const useEntityAtPosition = (row: number, col: number): EntityWithLayout | null => {
   const allEntities = useConfigStore((state) => state.allEntities);
   const layout = useConfigStore((state) => state.layout);
 
-  // Create a map for quick entity lookup
   const entityMap = new Map(allEntities.map((e) => [e.entity_id, e]));
 
-  // Map layout items to entities with layout info
-  return layout.items
-    .map((item, index) => {
-      const entity = entityMap.get(item.entityId);
-      if (!entity) return null;
-      return {
-        ...entity,
-        enabled: item.enabled,
-        index,
-      };
-    })
-    .filter((e): e is EntityWithLayout => e !== null);
+  const item = layout.items.find(
+    (item) => item.position?.row === row && item.position?.col === col
+  );
+
+  if (!item) return null;
+
+  const entity = entityMap.get(item.entityId);
+  if (!entity) return null;
+
+  return {
+    ...entity,
+    enabled: item.enabled,
+    position: item.position,
+  };
 };
 
-// Selector to count enabled entities
-export const useEnabledCount = (): number => {
+// Get all entities that are placed on the grid
+export const useGridEntities = (): Map<string, EntityWithLayout> => {
+  const allEntities = useConfigStore((state) => state.allEntities);
   const layout = useConfigStore((state) => state.layout);
-  return layout.items.filter((item) => item.enabled).length;
+
+  const entityMap = new Map(allEntities.map((e) => [e.entity_id, e]));
+  const gridMap = new Map<string, EntityWithLayout>();
+
+  layout.items.forEach((item) => {
+    if (item.position) {
+      const entity = entityMap.get(item.entityId);
+      if (entity) {
+        const key = positionKey(item.position.row, item.position.col);
+        gridMap.set(key, {
+          ...entity,
+          enabled: item.enabled,
+          position: item.position,
+        });
+      }
+    }
+  });
+
+  return gridMap;
+};
+
+// Get all entities that are NOT placed on the grid (available for adding)
+export const useAvailableEntities = (): EntityInfo[] => {
+  const allEntities = useConfigStore((state) => state.allEntities);
+  const layout = useConfigStore((state) => state.layout);
+
+  const placedEntityIds = new Set(
+    layout.items
+      .filter((item) => item.position)
+      .map((item) => item.entityId)
+  );
+
+  return allEntities.filter((entity) => !placedEntityIds.has(entity.entity_id));
+};
+
+// Get grid configuration
+export const useGridConfig = (): GridConfig => {
+  const layout = useConfigStore((state) => state.layout);
+  return layout.grid || DEFAULT_GRID;
+};
+
+// Count of entities on the grid
+export const useGridEntityCount = (): number => {
+  const layout = useConfigStore((state) => state.layout);
+  return layout.items.filter((item) => item.position).length;
+};
+
+// Get all unique domains from available entities
+export const useAvailableDomains = (): string[] => {
+  const availableEntities = useAvailableEntities();
+  const domains = new Set(availableEntities.map((e) => e.domain));
+  return Array.from(domains).sort();
 };
