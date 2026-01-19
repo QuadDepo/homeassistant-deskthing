@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { DeskThing } from "@deskthing/server";
-import { SETTING_TYPES } from "@deskthing/types";
+import { SETTING_TYPES, type SettingsList, type SettingsString } from "@deskthing/types";
 import { getHomeAssistantStates } from "../utils/getHomeAssistantStates";
 import type { SystemMachineSnaphot } from "../systemMachine";
 import type { LayoutConfig } from "../../shared/index";
@@ -130,11 +130,10 @@ export const createApiRoutes = (getSnapshot: GetSnapshot) => {
 
       // Update both layout and entities settings
       // Layout is stored as JSON string to work with DeskThing's type system
-      // Use type assertion since we know entities setting is a LIST type
-      const existingEntities = (settings as Record<string, unknown>)?.entities;
+      const existingEntities = settings?.entities as SettingsList | undefined;
 
-      const entitiesSetting = existingEntities
-        ? { ...(existingEntities as object), value: enabledEntityIds }
+      const entitiesSetting: SettingsList & { id: string } = existingEntities
+        ? { ...existingEntities, id: "entities", value: enabledEntityIds }
         : {
             id: "entities",
             label: "Entities",
@@ -143,15 +142,17 @@ export const createApiRoutes = (getSnapshot: GetSnapshot) => {
             options: [],
           };
 
+      const layoutSetting: SettingsString & { id: string } = {
+        id: "layout",
+        label: "Entity Layout",
+        type: SETTING_TYPES.STRING,
+        value: JSON.stringify(validatedLayout),
+      };
+
       await DeskThing.setSettings({
         ...settings,
-        layout: {
-          id: "layout",
-          label: "Entity Layout",
-          type: SETTING_TYPES.STRING,
-          value: JSON.stringify(validatedLayout),
-        },
-        entities: entitiesSetting as any,
+        layout: layoutSetting,
+        entities: entitiesSetting,
       });
 
       // Send layout update to the DeskThing client
