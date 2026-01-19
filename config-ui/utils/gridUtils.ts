@@ -1,5 +1,5 @@
-import type { EntitySize } from "../../shared";
-import { DEFAULT_SIZE } from "../../shared";
+import type { EntitySize } from "../../shared/types/grid";
+import { DEFAULT_SIZE } from "../../shared/types/grid";
 
 /** Grid gap in pixels (gap-2 = 8px) */
 export const GRID_GAP = 8;

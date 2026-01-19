@@ -2,8 +2,8 @@ import { memo, useCallback } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { cx } from "class-variance-authority";
 import Icon from "@mdi/react";
-import { mdiClose, mdiResize } from "@mdi/js";
-import { DEFAULT_SIZE } from "../../../../shared";
+import { mdiClose, mdiArrowTopLeftBottomRightBold } from "@mdi/js";
+import { DEFAULT_SIZE } from "../../../../shared/types/grid";
 import { domainIcons, defaultIcon } from "../../../utils/domainIcons";
 import { cellStyles } from "../styles";
 import type { EntityWithLayout } from "../../../stores/configStore";
@@ -92,7 +92,7 @@ const DraggableCell = memo(function DraggableCell({
         className="absolute bottom-1 right-1 w-5 h-5 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 rounded-sm hover:bg-blue-500/80 flex items-center justify-center z-10"
         title="Drag to resize"
       >
-        <Icon path={mdiResize} size={0.5} className="text-white" />
+        <Icon path={mdiArrowTopLeftBottomRightBold} size={0.5} className="text-white" />
       </div>
     </div>
   );

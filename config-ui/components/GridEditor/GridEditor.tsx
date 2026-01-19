@@ -9,7 +9,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { DEFAULT_SIZE } from "../../../shared";
+import { DEFAULT_SIZE } from "../../../shared/types/grid";
 import {
   useConfigStore,
   useGridConfig,
@@ -17,20 +17,32 @@ import {
   type EntityWithLayout,
 } from "../../stores/configStore";
 import { useResize } from "../../hooks/useResize";
-import { calculateCellDimensions, calculateSnappedPosition, isValidMove } from "../../utils/gridUtils";
+import {
+  calculateCellDimensions,
+  calculateSnappedPosition,
+  isValidMove,
+  GRID_GAP,
+} from "../../utils/gridUtils";
+
 import EntityPicker from "../EntityPicker";
 import GridCells from "./GridCells";
 import DragOverlayContent from "./overlays/DragOverlayContent";
 import ResizePreview from "./overlays/ResizePreview";
 import DropPreview from "./overlays/DropPreview";
 
-// Drag state stored in ref to avoid re-renders during drag
-interface DragState {
-  entity: EntityWithLayout | null;
-  fromCell: { row: number; col: number } | null;
-  hoveredCell: { row: number; col: number } | null;
-  cellDimensions: { width: number; height: number } | null;
-}
+const DRAG_ACTIVATION_DISTANCE = 8;
+
+type DragState =
+  | { status: "idle" }
+  | {
+      status: "dragging";
+      entity: EntityWithLayout;
+      fromCell: { row: number; col: number };
+      hoveredCell: { row: number; col: number } | null;
+      cellDimensions: { width: number; height: number };
+    };
+
+const IDLE_DRAG_STATE: DragState = { status: "idle" };
 
 const GridEditor = () => {
   const gridConfig = useGridConfig();
@@ -45,13 +57,7 @@ const GridEditor = () => {
 
   const gridRef = useRef<HTMLDivElement>(null);
 
-  // Drag state ref - transient state that doesn't need to trigger re-renders
-  const dragStateRef = useRef<DragState>({
-    entity: null,
-    fromCell: null,
-    hoveredCell: null,
-    cellDimensions: null,
-  });
+  const dragStateRef = useRef<DragState>(IDLE_DRAG_STATE);
 
   // Minimal state for overlay rendering only (updates on drag start/end)
   const [dragOverlayData, setDragOverlayData] = useState<{
@@ -61,11 +67,17 @@ const GridEditor = () => {
   } | null>(null);
 
   // Track hovered cell for drop preview (this needs state since it updates the preview)
-  const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<{
+    row: number;
+    col: number;
+  } | null>(null);
 
   // Entity picker state
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [targetCell, setTargetCell] = useState<{ row: number; col: number } | null>(null);
+  const [targetCell, setTargetCell] = useState<{
+    row: number;
+    col: number;
+  } | null>(null);
 
   // Resize hook
   const { resizeStateRef, handleResizeStart } = useResize({
@@ -79,100 +91,106 @@ const GridEditor = () => {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    })
+      activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE },
+    }),
   );
 
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const { entity, row, col } = event.active.data.current as {
-      entity: EntityWithLayout;
-      row: number;
-      col: number;
-    };
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { entity, row, col } = event.active.data.current as {
+        entity: EntityWithLayout;
+        row: number;
+        col: number;
+      };
 
-    const gridEl = gridRef.current;
-    const cellDimensions = gridEl ? calculateCellDimensions(gridEl, gridConfig) : null;
+      const gridEl = gridRef.current;
+      const cellDimensions = gridEl
+        ? calculateCellDimensions(gridEl, gridConfig)
+        : null;
+      if (!cellDimensions) return;
 
-    // Update ref (no re-render)
-    dragStateRef.current = {
-      entity,
-      fromCell: { row, col },
-      hoveredCell: null,
-      cellDimensions,
-    };
+      dragStateRef.current = {
+        status: "dragging",
+        entity,
+        fromCell: { row, col },
+        hoveredCell: null,
+        cellDimensions,
+      };
 
-    // Update state for overlay (single re-render)
-    if (cellDimensions) {
       setDragOverlayData({ entity, cellDimensions, fromCell: { row, col } });
-    }
-  }, [gridConfig]);
+    },
+    [gridConfig],
+  );
 
   const handleDragOver = useCallback((event: DragOverEvent) => {
+    const dragState = dragStateRef.current;
+    if (dragState.status !== "dragging") return;
+
     const { over } = event;
     if (over) {
       const toData = over.data.current as { row: number; col: number };
-      dragStateRef.current.hoveredCell = toData;
+      dragState.hoveredCell = toData;
       setHoveredCell(toData);
     } else {
-      dragStateRef.current.hoveredCell = null;
+      dragState.hoveredCell = null;
       setHoveredCell(null);
     }
   }, []);
 
   const handleDragCancel = useCallback(() => {
-    dragStateRef.current = {
-      entity: null,
-      fromCell: null,
-      hoveredCell: null,
-      cellDimensions: null,
-    };
+    dragStateRef.current = IDLE_DRAG_STATE;
     setDragOverlayData(null);
     setHoveredCell(null);
   }, []);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const dragState = dragStateRef.current;
-    const draggedEntity = dragState.entity;
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const dragState = dragStateRef.current;
+      if (dragState.status !== "dragging") return;
 
-    // Clear state
-    dragStateRef.current = {
-      entity: null,
-      fromCell: null,
-      hoveredCell: null,
-      cellDimensions: null,
-    };
-    setDragOverlayData(null);
-    setHoveredCell(null);
+      const draggedEntity = dragState.entity;
 
-    const { active, over } = event;
-    if (!over) return;
+      dragStateRef.current = IDLE_DRAG_STATE;
+      setDragOverlayData(null);
+      setHoveredCell(null);
 
-    const fromData = active.data.current as { row: number; col: number };
-    const toData = over.data.current as { row: number; col: number };
+      const { active, over } = event;
+      if (!over) return;
 
-    // Don't move to same position
-    if (!isValidMove(fromData, toData)) return;
+      const fromData = active.data.current as { row: number; col: number };
+      const toData = over.data.current as { row: number; col: number };
 
-    const size = draggedEntity?.size || DEFAULT_SIZE;
-    const snapped = calculateSnappedPosition(toData.row, toData.col, size, gridConfig);
+      if (!isValidMove(fromData, toData)) return;
 
-    // Don't move if snapped position is same as original
-    if (!isValidMove(fromData, snapped)) return;
+      const size = draggedEntity.size || DEFAULT_SIZE;
+      const snapped = calculateSnappedPosition(
+        toData.row,
+        toData.col,
+        size,
+        gridConfig,
+      );
 
-    moveEntity(fromData.row, fromData.col, snapped.row, snapped.col);
-  }, [moveEntity, gridConfig]);
+      if (!isValidMove(fromData, snapped)) return;
+
+      moveEntity(fromData.row, fromData.col, snapped.row, snapped.col);
+    },
+    [moveEntity, gridConfig],
+  );
 
   const handleAddClick = useCallback((row: number, col: number) => {
     setTargetCell({ row, col });
     setPickerOpen(true);
   }, []);
 
-  const handleSelectEntity = useCallback((entityId: string) => {
-    if (targetCell) {
-      placeEntity(entityId, targetCell.row, targetCell.col);
-      setTargetCell(null);
-    }
-  }, [targetCell, placeEntity]);
+  const handleSelectEntity = useCallback(
+    (entityId: string) => {
+      if (targetCell) {
+        placeEntity(entityId, targetCell.row, targetCell.col);
+        setTargetCell(null);
+      }
+    },
+    [targetCell, placeEntity],
+  );
 
   const handleClosePicker = useCallback(() => {
     setPickerOpen(false);
@@ -183,10 +201,13 @@ const GridEditor = () => {
   const resizingEntityId = resizingEntity?.entityId ?? null;
 
   // Memoize grid style
-  const gridStyle = useMemo(() => ({
-    gridTemplateColumns: `repeat(${gridConfig.cols}, minmax(0, 1fr))`,
-    gridTemplateRows: `repeat(${gridConfig.rows}, minmax(0, 1fr))`,
-  }), [gridConfig.cols, gridConfig.rows]);
+  const gridStyle = useMemo(
+    () => ({
+      gridTemplateColumns: `repeat(${gridConfig.cols}, minmax(0, 1fr))`,
+      gridTemplateRows: `repeat(${gridConfig.rows}, minmax(0, 1fr))`,
+    }),
+    [gridConfig.cols, gridConfig.rows],
+  );
 
   return (
     <div className="space-y-4">

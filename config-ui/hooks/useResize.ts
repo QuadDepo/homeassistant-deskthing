@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, RefObject } from "react";
-import { DEFAULT_SIZE } from "../../shared";
-import type { EntitySize, LayoutItem } from "../../shared";
+import type { EntitySize, LayoutItem } from "../../shared/types/grid";
+import { DEFAULT_SIZE } from "../../shared/types/grid";
+import { GRID_GAP } from "../utils/gridUtils";
 
 interface ResizeState {
   entityId: string;
@@ -41,9 +42,8 @@ export function useResize({
     if (!gridEl) return;
 
     const rect = gridEl.getBoundingClientRect();
-    const gap = 8;
-    const totalGapWidth = gap * (gridConfig.cols - 1);
-    const totalGapHeight = gap * (gridConfig.rows - 1);
+    const totalGapWidth = GRID_GAP * (gridConfig.cols - 1);
+    const totalGapHeight = GRID_GAP * (gridConfig.rows - 1);
     const cellWidth = (rect.width - totalGapWidth) / gridConfig.cols;
     const cellHeight = (rect.height - totalGapHeight) / gridConfig.rows;
 

@@ -1,4 +1,4 @@
-import type { LayoutConfig } from "../../shared";
+import type { LayoutConfig } from "../../shared/types/grid";
 import type {
   EntitiesResponse,
   LayoutResponse,

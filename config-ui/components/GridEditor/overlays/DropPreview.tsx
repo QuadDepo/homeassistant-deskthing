@@ -1,7 +1,7 @@
 import { memo, useMemo } from "react";
 import { cx } from "class-variance-authority";
-import { canMove } from "../../../../shared";
-import type { EntitySize } from "../../../../shared";
+import type { EntitySize } from "../../../../shared/types/grid";
+import { canMove } from "../../../../shared/utils/grid";
 import { calculateDropPreviewState } from "../../../utils/gridUtils";
 
 export interface DropPreviewProps {

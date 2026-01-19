@@ -1,8 +1,9 @@
 import { memo } from "react";
 import { cx } from "class-variance-authority";
 import Icon from "@mdi/react";
-import { DEFAULT_SIZE } from "../../../../shared";
+import { DEFAULT_SIZE } from "../../../../shared/types/grid";
 import { domainIcons, defaultIcon } from "../../../utils/domainIcons";
+import { GRID_GAP } from "../../../utils/gridUtils";
 import { cellStyles } from "../styles";
 import type { EntityWithLayout } from "../../../stores/configStore";
 
@@ -19,11 +20,9 @@ const DragOverlayContent = memo(function DragOverlayContent({
 }: DragOverlayContentProps) {
   const iconPath = domainIcons[entity.domain] || defaultIcon;
   const size = entity.size || DEFAULT_SIZE;
-  const gap = 8; // gap-2 = 8px
 
-  // Calculate overlay dimensions based on entity size
-  const width = cellWidth * size.colSpan + gap * (size.colSpan - 1);
-  const height = cellHeight * size.rowSpan + gap * (size.rowSpan - 1);
+  const width = cellWidth * size.colSpan + GRID_GAP * (size.colSpan - 1);
+  const height = cellHeight * size.rowSpan + GRID_GAP * (size.rowSpan - 1);
 
   return (
     <div

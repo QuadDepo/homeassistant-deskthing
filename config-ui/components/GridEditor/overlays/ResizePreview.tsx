@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { cx } from "class-variance-authority";
-import { canResize } from "../../../../shared";
-import type { EntitySize } from "../../../../shared";
+import type { EntitySize } from "../../../../shared/types/grid";
+import { canResize } from "../../../../shared/utils/grid";
 
 export interface ResizePreviewProps {
   entityId: string;

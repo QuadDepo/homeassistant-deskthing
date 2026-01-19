@@ -1,6 +1,6 @@
 import { memo, useMemo } from "react";
-import { positionKey, buildOccupancyMap } from "../../../shared";
-import type { LayoutItem } from "../../../shared";
+import type { LayoutItem } from "../../../shared/types/grid";
+import { positionKey, buildOccupancyMap } from "../../../shared/utils/grid";
 import type { EntityWithLayout } from "../../stores/configStore";
 import DraggableCell from "./cells/DraggableCell";
 import DroppableCell from "./cells/DroppableCell";
