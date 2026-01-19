@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -12,18 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { cva, cx } from "class-variance-authority";
 import Icon from "@mdi/react";
-import {
-  mdiLightbulb,
-  mdiToggleSwitch,
-  mdiThermometer,
-  mdiSpeaker,
-  mdiBlindsHorizontal,
-  mdiFan,
-  mdiLock,
-  mdiEye,
-  mdiPlus,
-  mdiClose,
-} from "@mdi/js";
+import { mdiPlus, mdiClose } from "@mdi/js";
 import EntityPicker from "./EntityPicker";
 import { positionKey } from "../../shared";
 import {
@@ -32,18 +21,7 @@ import {
   useGridEntities,
   type EntityWithLayout,
 } from "../stores/configStore";
-
-const domainIcons: Record<string, string> = {
-  light: mdiLightbulb,
-  switch: mdiToggleSwitch,
-  climate: mdiThermometer,
-  media_player: mdiSpeaker,
-  cover: mdiBlindsHorizontal,
-  fan: mdiFan,
-  lock: mdiLock,
-  sensor: mdiEye,
-  binary_sensor: mdiEye,
-};
+import { domainIcons, defaultIcon } from "../utils/domainIcons";
 
 const cellStyles = cva(
   [
@@ -93,17 +71,22 @@ interface DraggableCellProps {
   row: number;
   col: number;
   entity: EntityWithLayout;
-  onRemove: () => void;
+  removeFromGrid: (row: number, col: number) => void;
 }
 
-const DraggableCell = ({ row, col, entity, onRemove }: DraggableCellProps) => {
+const DraggableCell = memo(function DraggableCell({ row, col, entity, removeFromGrid }: DraggableCellProps) {
   const id = `${row}-${col}`;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id,
     data: { row, col, entity },
   });
 
-  const iconPath = domainIcons[entity.domain] || mdiEye;
+  const iconPath = domainIcons[entity.domain] || defaultIcon;
+
+  const handleRemove = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeFromGrid(row, col);
+  }, [removeFromGrid, row, col]);
 
   return (
     <div
@@ -114,10 +97,7 @@ const DraggableCell = ({ row, col, entity, onRemove }: DraggableCellProps) => {
     >
       {/* Remove button */}
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
+        onClick={handleRemove}
         className="absolute top-1 right-1 p-1 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/50 z-10"
         title="Remove from grid"
       >
@@ -135,25 +115,29 @@ const DraggableCell = ({ row, col, entity, onRemove }: DraggableCellProps) => {
       </div>
     </div>
   );
-};
+});
 
 interface DroppableCellProps {
   row: number;
   col: number;
-  onAdd: () => void;
+  onAddClick: (row: number, col: number) => void;
 }
 
-const DroppableCell = ({ row, col, onAdd }: DroppableCellProps) => {
+const DroppableCell = memo(function DroppableCell({ row, col, onAddClick }: DroppableCellProps) {
   const id = `${row}-${col}`;
   const { setNodeRef, isOver } = useDroppable({
     id,
     data: { row, col },
   });
 
+  const handleClick = useCallback(() => {
+    onAddClick(row, col);
+  }, [onAddClick, row, col]);
+
   return (
     <button
       ref={setNodeRef}
-      onClick={onAdd}
+      onClick={handleClick}
       className={cx(cellStyles({ isEmpty: true, isOver }))}
       title="Click to add entity or drag here"
     >
@@ -164,11 +148,11 @@ const DroppableCell = ({ row, col, onAdd }: DroppableCellProps) => {
       />
     </button>
   );
-};
+});
 
 // Overlay shown while dragging
-const DragOverlayContent = ({ entity }: { entity: EntityWithLayout }) => {
-  const iconPath = domainIcons[entity.domain] || mdiEye;
+const DragOverlayContent = memo(function DragOverlayContent({ entity }: { entity: EntityWithLayout }) {
+  const iconPath = domainIcons[entity.domain] || defaultIcon;
 
   return (
     <div className={cx(cellStyles({ isEmpty: false }), "shadow-xl scale-105")}>
@@ -180,7 +164,7 @@ const DragOverlayContent = ({ entity }: { entity: EntityWithLayout }) => {
       </div>
     </div>
   );
-};
+});
 
 const GridEditor = () => {
   const gridConfig = useGridConfig();
@@ -205,12 +189,12 @@ const GridEditor = () => {
     })
   );
 
-  const handleDragStart = (event: DragStartEvent) => {
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     const { entity } = event.active.data.current as { entity: EntityWithLayout };
     setActiveEntity(entity);
-  };
+  }, []);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     setActiveEntity(null);
 
     const { active, over } = event;
@@ -223,24 +207,24 @@ const GridEditor = () => {
     if (fromData.row === toData.row && fromData.col === toData.col) return;
 
     moveEntity(fromData.row, fromData.col, toData.row, toData.col);
-  };
+  }, [moveEntity]);
 
-  const handleAddClick = (row: number, col: number) => {
+  const handleAddClick = useCallback((row: number, col: number) => {
     setTargetCell({ row, col });
     setPickerOpen(true);
-  };
+  }, []);
 
-  const handleSelectEntity = (entityId: string) => {
+  const handleSelectEntity = useCallback((entityId: string) => {
     if (targetCell) {
       placeEntity(entityId, targetCell.row, targetCell.col);
       setTargetCell(null);
     }
-  };
+  }, [targetCell, placeEntity]);
 
-  const handleClosePicker = () => {
+  const handleClosePicker = useCallback(() => {
     setPickerOpen(false);
     setTargetCell(null);
-  };
+  }, []);
 
   // Generate grid cells
   const cells = [];
@@ -256,7 +240,7 @@ const GridEditor = () => {
             row={row}
             col={col}
             entity={entity}
-            onRemove={() => removeFromGrid(row, col)}
+            removeFromGrid={removeFromGrid}
           />
         );
       } else {
@@ -265,7 +249,7 @@ const GridEditor = () => {
             key={key}
             row={row}
             col={col}
-            onAdd={() => handleAddClick(row, col)}
+            onAddClick={handleAddClick}
           />
         );
       }
