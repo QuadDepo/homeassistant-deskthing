@@ -8,9 +8,9 @@ export const VITE_DEV_PORTS = {
   mainApp: 5173,
 } as const;
 
-export const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === "production";
 
-export const getConfigServerPort = (): number =>
+export const getConfigServerBasePort = (): number =>
   isProduction
     ? CONFIG_SERVER_PORTS.production
     : CONFIG_SERVER_PORTS.development;

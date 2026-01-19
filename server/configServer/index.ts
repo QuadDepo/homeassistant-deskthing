@@ -3,8 +3,9 @@ import { join } from "path";
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
+import getPort, { portNumbers } from "get-port";
 import { createApiRoutes } from "./routes";
-import { getConfigServerPort } from "../../shared/config";
+import { getConfigServerBasePort } from "../../shared/config";
 import type { SystemMachineSnaphot } from "../systemMachine";
 
 type GetSnapshot = () => SystemMachineSnaphot;
@@ -59,8 +60,12 @@ export const createConfigServer = (getSnapshot: GetSnapshot) => {
   let server: ReturnType<typeof serve> | null = null;
 
   return {
-    start: () => {
-      const port = getConfigServerPort();
+    start: async () => {
+      const basePort = getConfigServerBasePort();
+      const port = await getPort({
+        port: portNumbers(basePort, basePort + 10),
+      });
+
       server = serve(
         {
           fetch: app.fetch,

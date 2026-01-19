@@ -73,7 +73,7 @@ const start = async () => {
   // Start the config server for entity layout configuration
   try {
     configServer = createConfigServer(() => systemActor.getSnapshot());
-    configServer.start();
+    await configServer.start();
   } catch (error) {
     console.error("[HA] Failed to start config server:", error);
     // Don't crash the main app if config server fails to start
