@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { useConfigStore, useEnabledCount } from "./stores/configStore";
-import EntityList from "./components/EntityList";
+import { useConfigStore, useGridEntityCount } from "./stores/configStore";
+import GridEditor from "./components/GridEditor";
 
 const App = () => {
   const loadData = useConfigStore((state) => state.loadData);
@@ -9,7 +9,7 @@ const App = () => {
   const isSaving = useConfigStore((state) => state.isSaving);
   const isDirty = useConfigStore((state) => state.isDirty);
   const error = useConfigStore((state) => state.error);
-  const enabledCount = useEnabledCount();
+  const gridEntityCount = useGridEntityCount();
 
   useEffect(() => {
     loadData();
@@ -20,11 +20,11 @@ const App = () => {
       <header className="sticky top-0 z-10 bg-black/90 backdrop-blur-sm border-b border-white/10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">Entity Configuration</h1>
+            <h1 className="text-xl font-semibold">Grid Layout Editor</h1>
             <p className="text-white/50 text-sm">
-              {enabledCount > 0
-                ? `${enabledCount} entities enabled - drag to reorder, click to toggle`
-                : "Click the circle to enable entities for your DeskThing"}
+              {gridEntityCount > 0
+                ? `${gridEntityCount} entities on grid`
+                : "Click empty cells to add entities"}
             </p>
           </div>
 
@@ -54,7 +54,7 @@ const App = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-white/20 border-t-white"></div>
           </div>
         ) : (
-          <EntityList />
+          <GridEditor />
         )}
       </main>
     </div>

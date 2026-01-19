@@ -1,0 +1,234 @@
+import { useState, useMemo, useEffect } from "react";
+import { cva, cx } from "class-variance-authority";
+import Icon from "@mdi/react";
+import {
+  mdiLightbulb,
+  mdiToggleSwitch,
+  mdiThermometer,
+  mdiSpeaker,
+  mdiBlindsHorizontal,
+  mdiFan,
+  mdiLock,
+  mdiEye,
+  mdiClose,
+  mdiMagnify,
+} from "@mdi/js";
+import type { EntityInfo } from "../../server/configServer/types";
+import { useAvailableEntities } from "../stores/configStore";
+
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (entityId: string) => void;
+  targetRow: number;
+  targetCol: number;
+}
+
+const domainIcons: Record<string, string> = {
+  light: mdiLightbulb,
+  switch: mdiToggleSwitch,
+  climate: mdiThermometer,
+  media_player: mdiSpeaker,
+  cover: mdiBlindsHorizontal,
+  fan: mdiFan,
+  lock: mdiLock,
+  sensor: mdiEye,
+  binary_sensor: mdiEye,
+};
+
+const domainLabels: Record<string, string> = {
+  light: "Lights",
+  switch: "Switches",
+  climate: "Climate",
+  media_player: "Media",
+  cover: "Covers",
+  fan: "Fans",
+  lock: "Locks",
+  sensor: "Sensors",
+  binary_sensor: "Binary Sensors",
+};
+
+const filterButtonStyles = cva(
+  ["px-3", "py-1.5", "rounded-lg", "text-sm", "font-medium", "transition-all", "whitespace-nowrap", "flex-shrink-0"],
+  {
+    variants: {
+      active: {
+        true: ["bg-blue-500", "text-white"],
+        false: ["bg-white/10", "text-white/70", "hover:bg-white/20"],
+      },
+    },
+  }
+);
+
+const EntityPicker = ({ isOpen, onClose, onSelect, targetRow, targetCol }: Props) => {
+  const [search, setSearch] = useState("");
+  const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+
+  const availableEntities = useAvailableEntities();
+
+  // Reset filters when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setSearch("");
+      setSelectedDomain(null);
+    }
+  }, [isOpen]);
+
+  // Get unique domains
+  const domains = useMemo(() => {
+    const domainSet = new Set(availableEntities.map((e) => e.domain));
+    return Array.from(domainSet).sort();
+  }, [availableEntities]);
+
+  // Filter entities
+  const filteredEntities = useMemo(() => {
+    let filtered = availableEntities;
+
+    // Filter by domain
+    if (selectedDomain) {
+      filtered = filtered.filter((e) => e.domain === selectedDomain);
+    }
+
+    // Filter by search
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(
+        (e) =>
+          e.friendly_name.toLowerCase().includes(searchLower) ||
+          e.entity_id.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  }, [availableEntities, selectedDomain, search]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="relative bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden border border-white/10">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Add Entity</h2>
+            <p className="text-sm text-white/50">
+              Position: Row {targetRow + 1}, Column {targetCol + 1}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            <Icon path={mdiClose} size={1} className="text-white/70" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="p-4 border-b border-white/10">
+          <div className="relative">
+            <Icon
+              path={mdiMagnify}
+              size={0.9}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
+            />
+            <input
+              type="text"
+              placeholder="Search entities..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+              autoFocus
+            />
+          </div>
+        </div>
+
+        {/* Domain filters */}
+        <div className="px-4 py-3 border-b border-white/10 overflow-x-auto">
+          <div className="flex gap-2 min-w-max">
+            <button
+              onClick={() => setSelectedDomain(null)}
+              className={cx(filterButtonStyles({ active: selectedDomain === null }))}
+            >
+              All ({availableEntities.length})
+            </button>
+            {domains.map((domain) => {
+              const count = availableEntities.filter((e) => e.domain === domain).length;
+              return (
+                <button
+                  key={domain}
+                  onClick={() => setSelectedDomain(domain)}
+                  className={cx(filterButtonStyles({ active: selectedDomain === domain }))}
+                >
+                  {domainLabels[domain] || domain} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Entity list */}
+        <div className="flex-1 overflow-y-auto p-2">
+          {filteredEntities.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-white/50">
+              <p>No entities found</p>
+              {search && (
+                <p className="text-sm mt-1">Try a different search term</p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {filteredEntities.map((entity) => (
+                <EntityRow
+                  key={entity.entity_id}
+                  entity={entity}
+                  onSelect={() => {
+                    onSelect(entity.entity_id);
+                    onClose();
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface EntityRowProps {
+  entity: EntityInfo;
+  onSelect: () => void;
+}
+
+const EntityRow = ({ entity, onSelect }: EntityRowProps) => {
+  const iconPath = domainIcons[entity.domain] || mdiEye;
+
+  return (
+    <button
+      onClick={onSelect}
+      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-white/10 transition-colors text-left"
+    >
+      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/10 flex-shrink-0">
+        <Icon path={iconPath} size={1} className="text-white/80" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-white font-medium truncate">
+          {entity.friendly_name}
+        </div>
+        <div className="text-white/50 text-sm truncate">{entity.entity_id}</div>
+      </div>
+      <div className="text-white/30 text-xs px-2 py-1 rounded bg-white/5">
+        {domainLabels[entity.domain] || entity.domain}
+      </div>
+    </button>
+  );
+};
+
+export default EntityPicker;
