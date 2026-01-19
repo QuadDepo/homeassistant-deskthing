@@ -1,20 +1,10 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, memo } from "react";
 import { cva, cx } from "class-variance-authority";
 import Icon from "@mdi/react";
-import {
-  mdiLightbulb,
-  mdiToggleSwitch,
-  mdiThermometer,
-  mdiSpeaker,
-  mdiBlindsHorizontal,
-  mdiFan,
-  mdiLock,
-  mdiEye,
-  mdiClose,
-  mdiMagnify,
-} from "@mdi/js";
+import { mdiClose, mdiMagnify } from "@mdi/js";
 import type { EntityInfo } from "../../server/configServer/types";
 import { useAvailableEntities } from "../stores/configStore";
+import { domainIcons, domainLabels, defaultIcon } from "../utils/domainIcons";
 
 interface Props {
   isOpen: boolean;
@@ -23,30 +13,6 @@ interface Props {
   targetRow: number;
   targetCol: number;
 }
-
-const domainIcons: Record<string, string> = {
-  light: mdiLightbulb,
-  switch: mdiToggleSwitch,
-  climate: mdiThermometer,
-  media_player: mdiSpeaker,
-  cover: mdiBlindsHorizontal,
-  fan: mdiFan,
-  lock: mdiLock,
-  sensor: mdiEye,
-  binary_sensor: mdiEye,
-};
-
-const domainLabels: Record<string, string> = {
-  light: "Lights",
-  switch: "Switches",
-  climate: "Climate",
-  media_player: "Media",
-  cover: "Covers",
-  fan: "Fans",
-  lock: "Locks",
-  sensor: "Sensors",
-  binary_sensor: "Binary Sensors",
-};
 
 const filterButtonStyles = cva(
   [
@@ -228,8 +194,8 @@ interface EntityRowProps {
   onSelect: () => void;
 }
 
-const EntityRow = ({ entity, onSelect }: EntityRowProps) => {
-  const iconPath = domainIcons[entity.domain] || mdiEye;
+const EntityRow = memo(function EntityRow({ entity, onSelect }: EntityRowProps) {
+  const iconPath = domainIcons[entity.domain] || defaultIcon;
 
   return (
     <button
@@ -250,6 +216,6 @@ const EntityRow = ({ entity, onSelect }: EntityRowProps) => {
       </div>
     </button>
   );
-};
+});
 
 export default EntityPicker;
