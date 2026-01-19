@@ -55,10 +55,15 @@ const EntityPicker = ({
     }
   }, [isOpen]);
 
-  // Get unique domains
-  const domains = useMemo(() => {
-    const domainSet = new Set(availableEntities.map((e) => e.domain));
-    return Array.from(domainSet).sort();
+  const { domains, domainCounts } = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const e of availableEntities) {
+      counts.set(e.domain, (counts.get(e.domain) || 0) + 1);
+    }
+    return {
+      domains: Array.from(counts.keys()).sort(),
+      domainCounts: counts,
+    };
   }, [availableEntities]);
 
   // Filter entities
@@ -141,22 +146,17 @@ const EntityPicker = ({
             >
               All ({availableEntities.length})
             </button>
-            {domains.map((domain) => {
-              const count = availableEntities.filter(
-                (e) => e.domain === domain,
-              ).length;
-              return (
-                <button
-                  key={domain}
-                  onClick={() => setSelectedDomain(domain)}
-                  className={cx(
-                    filterButtonStyles({ active: selectedDomain === domain }),
-                  )}
-                >
-                  {domainLabels[domain] || domain} ({count})
-                </button>
-              );
-            })}
+            {domains.map((domain) => (
+              <button
+                key={domain}
+                onClick={() => setSelectedDomain(domain)}
+                className={cx(
+                  filterButtonStyles({ active: selectedDomain === domain }),
+                )}
+              >
+                {domainLabels[domain] || domain} ({domainCounts.get(domain)})
+              </button>
+            ))}
           </div>
         </div>
 
