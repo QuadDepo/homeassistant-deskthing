@@ -7,7 +7,11 @@ import { cors } from "hono/cors";
 import { createApiRoutes } from "./routes.js";
 import type { SystemMachineSnaphot } from "../systemMachine.js";
 
-const CONFIG_PORT = 8765;
+// Use different ports for dev vs production to avoid clashing
+// Production (DeskThing app): 8765
+// Development (pnpm dev): 8767
+const isProduction = typeof __dirname !== "undefined";
+const CONFIG_PORT = isProduction ? 8765 : 8767;
 
 type GetSnapshot = () => SystemMachineSnaphot;
 
@@ -15,7 +19,7 @@ type GetSnapshot = () => SystemMachineSnaphot;
 // DeskThing CLI injects __dirname via esbuild banner in production
 // In production: __dirname points to the server folder, config-ui is a subfolder
 // In development: use CWD-relative paths
-const getConfigUiRoot = () => {
+const getConfigUiRoot = (): string | null => {
   // Check paths in order of likelihood
   const paths: string[] = [];
 
@@ -33,10 +37,13 @@ const getConfigUiRoot = () => {
     }
   }
 
-  // Fallback - will show error in logs if not found
-  console.warn("[HA] Config UI static files not found, tried:", paths);
-
-  throw new Error("Config UI static files not found");
+  // In development, static files don't exist (Vite serves them on port 8766)
+  // Return null instead of throwing - API will still work
+  console.log("[HA] Development mode: Config API only (no static files)");
+  console.log(
+    "[HA] Run 'pnpm dev:configui' for hot-reload UI on http://localhost:8766",
+  );
+  return null;
 };
 
 export const createConfigServer = (getSnapshot: GetSnapshot) => {
@@ -49,37 +56,44 @@ export const createConfigServer = (getSnapshot: GetSnapshot) => {
     cors({
       origin: [
         "http://localhost:5173",
-        "http://localhost:5174",
+        "http://localhost:8766",
         "http://127.0.0.1:5173",
+        "http://127.0.0.1:8766",
       ],
       allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       allowHeaders: ["Content-Type"],
     }),
   );
 
-  // Mount API routes
+  // Mount API routes (always available)
   app.route("/api", createApiRoutes(getSnapshot));
 
-  // Serve static files for the config UI
-  app.use(
-    "/*",
-    serveStatic({
-      root: configUiRoot,
-    }),
-  );
+  // Only serve static files if config-ui was found (production)
+  // In development, Vite serves the UI on port 5174
+  if (configUiRoot) {
+    // Serve static files for the config UI
+    app.use(
+      "/*",
+      serveStatic({
+        root: configUiRoot,
+      }),
+    );
 
-  // Fallback for SPA routing - serve index.html for non-file routes
-  app.get(
-    "*",
-    serveStatic({
-      root: configUiRoot,
-      path: "index.html",
-    }),
-  );
+    // Fallback for SPA routing - serve index.html for non-file routes
+    app.get(
+      "*",
+      serveStatic({
+        root: configUiRoot,
+        path: "index.html",
+      }),
+    );
+  }
+
+  let server: ReturnType<typeof serve> | null = null;
 
   return {
     start: () => {
-      const server = serve(
+      server = serve(
         {
           fetch: app.fetch,
           port: CONFIG_PORT,
@@ -91,6 +105,13 @@ export const createConfigServer = (getSnapshot: GetSnapshot) => {
         },
       );
       return server;
+    },
+    stop: () => {
+      if (server) {
+        console.log("[HA] Stopping config server...");
+        server.close();
+        server = null;
+      }
     },
   };
 };
