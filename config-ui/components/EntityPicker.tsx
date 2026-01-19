@@ -1,17 +1,18 @@
-import { useState, useMemo, useEffect, memo } from "react";
+import { useState, useMemo, useRef, useCallback, useImperativeHandle, forwardRef, memo } from "react";
 import { cva, cx } from "class-variance-authority";
 import Icon from "@mdi/react";
 import { mdiClose, mdiMagnify } from "@mdi/js";
 import type { EntityInfo } from "../../server/configServer/types";
+import type { GridPosition } from "../../shared/types/grid";
 import { useAvailableEntities } from "../stores/configStore";
 import { domainIcons, domainLabels, defaultIcon } from "../utils/domainIcons";
 
+export interface EntityPickerRef {
+  open: (row: number, col: number) => void;
+}
+
 interface Props {
-  isOpen: boolean;
-  onClose: () => void;
-  onSelect: (entityId: string) => void;
-  targetRow: number;
-  targetCol: number;
+  onSelect: (entityId: string, position: GridPosition) => void;
 }
 
 const filterButtonStyles = cva(
@@ -35,25 +36,40 @@ const filterButtonStyles = cva(
   },
 );
 
-const EntityPicker = ({
-  isOpen,
-  onClose,
-  onSelect,
-  targetRow,
-  targetCol,
-}: Props) => {
+const EntityPicker = forwardRef<EntityPickerRef, Props>(function EntityPicker(
+  { onSelect },
+  ref
+) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const [search, setSearch] = useState("");
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+  const [targetCell, setTargetCell] = useState<GridPosition | null>(null);
 
   const availableEntities = useAvailableEntities();
 
-  // Reset filters when modal opens
-  useEffect(() => {
-    if (isOpen) {
+  useImperativeHandle(ref, () => ({
+    open: (row: number, col: number) => {
+      setTargetCell({ row, col });
       setSearch("");
       setSelectedDomain(null);
-    }
-  }, [isOpen]);
+      dialogRef.current?.showModal();
+    },
+  }));
+
+  const handleClose = useCallback(() => {
+    dialogRef.current?.close();
+    setTargetCell(null);
+  }, []);
+
+  const handleSelect = useCallback(
+    (entityId: string) => {
+      if (targetCell) {
+        onSelect(entityId, targetCell);
+        handleClose();
+      }
+    },
+    [targetCell, onSelect, handleClose]
+  );
 
   const { domains, domainCounts } = useMemo(() => {
     const counts = new Map<string, number>();
@@ -88,33 +104,32 @@ const EntityPicker = ({
     return filtered;
   }, [availableEntities, selectedDomain, search]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="relative bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden border border-white/10">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <div>
-            <h2 className="text-lg font-semibold text-white">Add Entity</h2>
-            <p className="text-sm text-white/50">
-              Position: Row {targetRow + 1}, Column {targetCol + 1}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-          >
-            <Icon path={mdiClose} size={1} className="text-white/70" />
-          </button>
+    <dialog
+      ref={dialogRef}
+      className="bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden border border-white/10 backdrop:bg-black/80 backdrop:backdrop-blur-sm"
+      onClick={(e) => {
+        // Close on backdrop click (clicking the dialog element itself, not its children)
+        if (e.target === dialogRef.current) {
+          handleClose();
+        }
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <div>
+          <h2 className="text-lg font-semibold text-white">Add Entity</h2>
+          <p className="text-sm text-white/50">
+            Position: Row {(targetCell?.row ?? 0) + 1}, Column {(targetCell?.col ?? 0) + 1}
+          </p>
         </div>
+        <button
+          onClick={handleClose}
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+        >
+          <Icon path={mdiClose} size={1} className="text-white/70" />
+        </button>
+      </div>
 
         {/* Search */}
         <div className="p-4 border-b border-white/10">
@@ -175,19 +190,15 @@ const EntityPicker = ({
                 <EntityRow
                   key={entity.entity_id}
                   entity={entity}
-                  onSelect={() => {
-                    onSelect(entity.entity_id);
-                    onClose();
-                  }}
+                  onSelect={() => handleSelect(entity.entity_id)}
                 />
               ))}
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </dialog>
   );
-};
+});
 
 interface EntityRowProps {
   entity: EntityInfo;
