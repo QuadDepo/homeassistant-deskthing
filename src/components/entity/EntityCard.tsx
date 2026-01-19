@@ -5,6 +5,7 @@ import Icon from "@mdi/react";
 type Props = {
   name: string;
   isActive: boolean;
+  isPending?: boolean;
   iconPath: string;
   size?: string;
   onClick?: () => void;
@@ -15,6 +16,11 @@ const entityStyles = cva(["rounded-xl", "bg-white/70", "h-full", "w-full"], {
     active: {
       true: ["opacity-100"],
       false: ["opacity-20"],
+    },
+    // TODO: Differentiate pending styles?
+    pending: {
+      true: [],
+      false: [],
     },
   },
 });
@@ -37,6 +43,7 @@ const titleStyles = cva([
 const EntityCard = ({
   name,
   isActive,
+  isPending = false,
   iconPath,
   size = "1x1",
   onClick,
@@ -44,7 +51,7 @@ const EntityCard = ({
   return (
     <div
       className={cx(
-        entityStyles({ active: isActive }),
+        entityStyles({ active: isActive, pending: isPending }),
         positionToTailwindClass(size),
       )}
     >

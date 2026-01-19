@@ -75,6 +75,7 @@ const websocketMachine = setup({
           type: "ENTITY_ACTION";
           action: string;
           entity_id: string;
+          data?: object;
         }
       | {
           type: "ENTITIES_UPDATED";
@@ -152,6 +153,7 @@ const websocketMachine = setup({
 
             callService(context.connection, domain, service, {
               entity_id: event.entity_id,
+              ...(event.data || {}),
             });
           },
         },
