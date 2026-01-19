@@ -11,6 +11,15 @@ export type {
 // Constants
 export { DEFAULT_GRID, DEFAULT_SIZE } from "./types/grid";
 
+// Zod Schemas
+export {
+  GridPositionSchema,
+  EntitySizeSchema,
+  GridConfigSchema,
+  LayoutItemSchema,
+  LayoutConfigSchema,
+} from "./types/grid";
+
 // Utilities
 export {
   positionKey,

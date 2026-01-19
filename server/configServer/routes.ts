@@ -1,17 +1,22 @@
 import { Hono } from "hono";
 import { DeskThing } from "@deskthing/server";
 import { SETTING_TYPES } from "@deskthing/types";
-import { getHomeAssistantStates } from "../utils/getHomeAssistantStates.js";
-import type { SystemMachineSnaphot } from "../systemMachine.js";
-import type { LayoutConfig } from "../../shared/index.js";
-import { createEmptyLayout } from "../../shared/index.js";
+import { getHomeAssistantStates } from "../utils/getHomeAssistantStates";
+import type { SystemMachineSnaphot } from "../systemMachine";
+import type { LayoutConfig } from "../../shared/index";
+import {
+  createEmptyLayout,
+  LayoutConfigSchema,
+  isWithinBounds,
+  DEFAULT_SIZE,
+} from "../../shared/index";
 import type {
   EntitiesResponse,
   LayoutResponse,
   SaveLayoutRequest,
   StatusResponse,
   EntityInfo,
-} from "./types.js";
+} from "./types";
 
 type GetSnapshot = () => SystemMachineSnaphot;
 
@@ -82,11 +87,44 @@ export const createApiRoutes = (getSnapshot: GetSnapshot) => {
       const body = await c.req.json<SaveLayoutRequest>();
       const { layout } = body;
 
+      // Validate layout structure with Zod
+      const validationResult = LayoutConfigSchema.safeParse(layout);
+
+      if (!validationResult.success) {
+        return c.json(
+          {
+            success: false,
+            error: `Invalid layout configuration: ${validationResult.error.message}`,
+          },
+          400,
+        );
+      }
+
+      // Validate positions are within bounds (custom validation)
+      for (const item of validationResult.data.items) {
+        if (item.position) {
+          const size = item.size || DEFAULT_SIZE;
+          if (
+            !isWithinBounds(item.position, size, validationResult.data.grid)
+          ) {
+            return c.json(
+              {
+                success: false,
+                error: `Entity ${item.entityId} position out of bounds`,
+              },
+              400,
+            );
+          }
+        }
+      }
+
       // Get current settings
       const settings = await DeskThing.getSettings();
 
+      const validatedLayout = validationResult.data;
+
       // Extract enabled entity IDs from layout to sync with DeskThing settings
-      const enabledEntityIds = layout.items
+      const enabledEntityIds = validatedLayout.items
         .filter((item) => item.enabled)
         .map((item) => item.entityId);
 
@@ -111,7 +149,7 @@ export const createApiRoutes = (getSnapshot: GetSnapshot) => {
           id: "layout",
           label: "Entity Layout",
           type: SETTING_TYPES.STRING,
-          value: JSON.stringify(layout),
+          value: JSON.stringify(validatedLayout),
         },
         entities: entitiesSetting as any,
       });
@@ -119,7 +157,7 @@ export const createApiRoutes = (getSnapshot: GetSnapshot) => {
       // Send layout update to the DeskThing client
       DeskThing.send({
         type: "LAYOUT_CONFIG",
-        payload: layout,
+        payload: validatedLayout,
       });
 
       return c.json({ success: true });
