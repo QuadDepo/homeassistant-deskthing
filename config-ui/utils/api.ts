@@ -1,7 +1,7 @@
+import type { LayoutConfig } from "../../shared";
 import type {
   EntitiesResponse,
   LayoutResponse,
-  LayoutConfig,
   StatusResponse,
 } from "../../server/configServer/types";
 

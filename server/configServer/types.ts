@@ -1,15 +1,5 @@
-// Layout configuration types for entity ordering and selection
-
-export interface LayoutItem {
-  entityId: string;
-  enabled: boolean; // Whether this entity is selected to display on DeskThing
-  // Future: position, size, custom config
-}
-
-export interface LayoutConfig {
-  version: 1;
-  items: LayoutItem[];
-}
+// Server-specific types for the config API
+import type { LayoutConfig } from "../../shared";
 
 export interface EntityInfo {
   entity_id: string;
@@ -34,8 +24,3 @@ export interface StatusResponse {
   status: "connected" | "disconnected" | "configuring";
   entityCount: number;
 }
-
-export const createEmptyLayout = (): LayoutConfig => ({
-  version: 1,
-  items: [],
-});
