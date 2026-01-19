@@ -15,7 +15,8 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../dist/config-ui",
+    // Output to server folder so DeskThing CLI packages it with the server
+    outDir: "../dist/server/config-ui",
     emptyOutDir: true,
   },
 });
