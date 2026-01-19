@@ -12,7 +12,7 @@ type Props = {
   onClick?: () => void;
 };
 
-const entityStyles = cva(["rounded-xl", "bg-white/70"], {
+const entityStyles = cva(["rounded-xl", "bg-white/70", "h-full", "w-full"], {
   variants: {
     active: {
       true: ["opacity-100"],
