@@ -5,10 +5,11 @@ export type {
   LayoutItem,
   LayoutConfig,
   GridCellData,
+  EntitySize,
 } from "./types/grid";
 
 // Constants
-export { DEFAULT_GRID } from "./types/grid";
+export { DEFAULT_GRID, DEFAULT_SIZE } from "./types/grid";
 
 // Utilities
 export {
@@ -21,4 +22,10 @@ export {
   findNextAvailablePosition,
   isPositionOccupied,
   getTotalCells,
+  getOccupiedCells,
+  isWithinBounds,
+  buildOccupancyMap,
+  areCellsAvailable,
+  canResize,
+  canMove,
 } from "./utils/grid";

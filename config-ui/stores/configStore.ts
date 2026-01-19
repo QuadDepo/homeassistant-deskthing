@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import type { LayoutConfig, GridPosition, GridConfig } from "../../shared";
-import { DEFAULT_GRID, positionKey, isPositionOccupied } from "../../shared";
+import type { LayoutConfig, GridPosition, GridConfig, EntitySize } from "../../shared";
+import { DEFAULT_GRID, DEFAULT_SIZE, positionKey, canResize, canMove, getOccupiedCells, buildOccupancyMap, isWithinBounds, areCellsAvailable } from "../../shared";
 import type { EntityInfo } from "../../server/configServer/types";
 import {
   fetchEntities,
@@ -19,12 +19,15 @@ interface ConfigStore {
   isSaving: boolean;
   isDirty: boolean;
   error: string | null;
+  resizingEntity: { entityId: string; previewSize: EntitySize } | null;
 
   // Actions
   loadData: () => Promise<void>;
   placeEntity: (entityId: string, row: number, col: number) => void;
   removeFromGrid: (row: number, col: number) => void;
   moveEntity: (fromRow: number, fromCol: number, toRow: number, toCol: number) => void;
+  resizeEntity: (entityId: string, newSize: EntitySize) => void;
+  setResizingEntity: (state: { entityId: string; previewSize: EntitySize } | null) => void;
   saveLayout: () => Promise<void>;
 }
 
@@ -36,6 +39,7 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
   isSaving: false,
   isDirty: false,
   error: null,
+  resizingEntity: null,
 
   loadData: async () => {
     set({ isLoading: true, error: null });
@@ -139,15 +143,28 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
 
   placeEntity: (entityId: string, row: number, col: number) => {
     set((state) => {
-      // Check if position is already occupied
-      const isOccupied = state.layout.items.some(
-        (item) => item.position?.row === row && item.position?.col === col
-      );
-      if (isOccupied) return state;
+      const position = { row, col };
+
+      // Get the entity's current or default size
+      const currentItem = state.layout.items.find((item) => item.entityId === entityId);
+      const size = currentItem?.size || DEFAULT_SIZE;
+
+      // Validate the placement is within bounds
+      if (!isWithinBounds(position, size, state.layout.grid)) {
+        return state;
+      }
+
+      // Get all cells this entity would occupy
+      const cellsNeeded = getOccupiedCells(position, size);
+
+      // Check if those cells are available (excluding this entity if already placed)
+      if (!areCellsAvailable(cellsNeeded, state.layout.items, entityId)) {
+        return state;
+      }
 
       const items = state.layout.items.map((item) =>
         item.entityId === entityId
-          ? { ...item, enabled: true, position: { row, col } }
+          ? { ...item, enabled: true, position }
           : item
       );
 
@@ -175,15 +192,22 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
 
   moveEntity: (fromRow: number, fromCol: number, toRow: number, toCol: number) => {
     set((state) => {
-      // Check if target position is already occupied
-      const isOccupied = state.layout.items.some(
-        (item) => item.position?.row === toRow && item.position?.col === toCol
+      // Find the entity being moved
+      const movingItem = state.layout.items.find(
+        (item) => item.position?.row === fromRow && item.position?.col === fromCol
       );
-      if (isOccupied) return state;
+      if (!movingItem) return state;
+
+      const newPosition = { row: toRow, col: toCol };
+
+      // Use size-aware validation
+      if (!canMove(movingItem.entityId, newPosition, state.layout.items, state.layout.grid)) {
+        return state;
+      }
 
       const items = state.layout.items.map((item) =>
-        item.position?.row === fromRow && item.position?.col === fromCol
-          ? { ...item, position: { row: toRow, col: toCol } }
+        item.entityId === movingItem.entityId
+          ? { ...item, position: newPosition }
           : item
       );
 
@@ -192,6 +216,29 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
         isDirty: true,
       };
     });
+  },
+
+  resizeEntity: (entityId: string, newSize: EntitySize) => {
+    set((state) => {
+      // Validate resize
+      if (!canResize(entityId, newSize, state.layout.items, state.layout.grid)) {
+        return { resizingEntity: null }; // Invalid resize, clear preview
+      }
+
+      const items = state.layout.items.map((item) =>
+        item.entityId === entityId ? { ...item, size: newSize } : item
+      );
+
+      return {
+        layout: { ...state.layout, items },
+        isDirty: true,
+        resizingEntity: null,
+      };
+    });
+  },
+
+  setResizingEntity: (resizingState) => {
+    set({ resizingEntity: resizingState });
   },
 
   saveLayout: async () => {
@@ -214,6 +261,7 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
 export interface EntityWithLayout extends EntityInfo {
   enabled: boolean;
   position?: GridPosition;
+  size?: EntitySize;
 }
 
 // Get entity at a specific grid position
@@ -240,6 +288,7 @@ export const useGridEntities = (): Map<string, EntityWithLayout> => {
           ...entity,
           enabled: item.enabled,
           position: item.position,
+          size: item.size,
         });
       }
     }
