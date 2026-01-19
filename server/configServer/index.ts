@@ -3,9 +3,9 @@ import { join } from "path";
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
-import { createApiRoutes } from "./routes.js";
-import { getConfigServerPort, VITE_DEV_PORTS } from "../../shared/config.js";
-import type { SystemMachineSnaphot } from "../systemMachine.js";
+import { createApiRoutes } from "./routes";
+import { getConfigServerPort } from "../../shared/config";
+import type { SystemMachineSnaphot } from "../systemMachine";
 
 type GetSnapshot = () => SystemMachineSnaphot;
 

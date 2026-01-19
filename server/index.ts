@@ -1,13 +1,13 @@
-import { normalizeSystemStateValue } from "./utils/normalizeSystemStateValue.js";
+import { normalizeSystemStateValue } from "./utils/normalizeSystemStateValue";
 import { createDeskThing } from "@deskthing/server";
 import { createActor } from "xstate";
-import { systemMachine } from "./systemMachine.js";
-import { normalizeSettings } from "./utils/normalizeSettings.js";
-import { createBasicSettings } from "./utils/createSettings.js";
+import { systemMachine } from "./systemMachine";
+import { normalizeSettings } from "./utils/normalizeSettings";
+import { createBasicSettings } from "./utils/createSettings";
 import { DESKTHING_EVENTS, SocketData } from "@deskthing/types";
-import { createConfigServer } from "./configServer/index.js";
-import type { LayoutConfig } from "../shared/index.js";
-import { createEmptyLayout } from "../shared/index.js";
+import { createConfigServer } from "./configServer/index";
+import type { LayoutConfig } from "../shared/index";
+import { createEmptyLayout } from "../shared/index";
 
 const DeskThing = createDeskThing();
 
@@ -41,7 +41,7 @@ const sendLayoutToClient = async () => {
   console.log(
     "[HA] Sending layout to client:",
     `${layout.grid.rows}x${layout.grid.cols} grid,`,
-    `${layout.items.filter((i) => i.position).length} positioned items`
+    `${layout.items.filter((i) => i.position).length} positioned items`,
   );
   DeskThing.send({
     type: "LAYOUT_CONFIG",
