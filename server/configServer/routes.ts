@@ -1,16 +1,17 @@
 import { Hono } from "hono";
 import { DeskThing } from "@deskthing/server";
+import { SETTING_TYPES } from "@deskthing/types";
 import { getHomeAssistantStates } from "../utils/getHomeAssistantStates.js";
 import type { SystemMachineSnaphot } from "../systemMachine.js";
+import type { LayoutConfig } from "../../shared/index.js";
+import { createEmptyLayout } from "../../shared/index.js";
 import type {
   EntitiesResponse,
   LayoutResponse,
   SaveLayoutRequest,
   StatusResponse,
-  LayoutConfig,
   EntityInfo,
 } from "./types.js";
-import { createEmptyLayout } from "./types.js";
 
 type GetSnapshot = () => SystemMachineSnaphot;
 
@@ -55,7 +56,19 @@ export const createApiRoutes = (getSnapshot: GetSnapshot) => {
     try {
       const settings = await DeskThing.getSettings();
       const layoutSetting = settings?.layout;
-      const layout = (layoutSetting?.value as LayoutConfig) ?? createEmptyLayout();
+      let layout: LayoutConfig;
+
+      if (typeof layoutSetting?.value === "string") {
+        // Layout is stored as JSON string
+        try {
+          layout = JSON.parse(layoutSetting.value) as LayoutConfig;
+        } catch {
+          layout = createEmptyLayout();
+        }
+      } else {
+        layout = createEmptyLayout();
+      }
+
       return c.json<LayoutResponse>({ layout });
     } catch (error) {
       console.error("[Config Server] Failed to get layout:", error);
@@ -78,19 +91,29 @@ export const createApiRoutes = (getSnapshot: GetSnapshot) => {
         .map((item) => item.entityId);
 
       // Update both layout and entities settings
+      // Layout is stored as JSON string to work with DeskThing's type system
+      // Use type assertion since we know entities setting is a LIST type
+      const existingEntities = (settings as Record<string, unknown>)?.entities;
+
+      const entitiesSetting = existingEntities
+        ? { ...(existingEntities as object), value: enabledEntityIds }
+        : {
+            id: "entities",
+            label: "Entities",
+            type: SETTING_TYPES.LIST,
+            value: enabledEntityIds,
+            options: [],
+          };
+
       await DeskThing.setSettings({
         ...settings,
         layout: {
           id: "layout",
           label: "Entity Layout",
-          type: "string" as any, // Hidden setting - stored as JSON string
-          value: layout,
+          type: SETTING_TYPES.STRING,
+          value: JSON.stringify(layout),
         },
-        // Also update the entities multiselect to keep DeskThing settings in sync
-        entities: {
-          ...settings?.entities,
-          value: enabledEntityIds,
-        },
+        entities: entitiesSetting as any,
       });
 
       // Send layout update to the DeskThing client
