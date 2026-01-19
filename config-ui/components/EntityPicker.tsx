@@ -49,7 +49,16 @@ const domainLabels: Record<string, string> = {
 };
 
 const filterButtonStyles = cva(
-  ["px-3", "py-1.5", "rounded-lg", "text-sm", "font-medium", "transition-all", "whitespace-nowrap", "flex-shrink-0"],
+  [
+    "px-3",
+    "py-1.5",
+    "rounded-lg",
+    "text-sm",
+    "font-medium",
+    "transition-all",
+    "whitespace-nowrap",
+    "flex-shrink-0",
+  ],
   {
     variants: {
       active: {
@@ -57,10 +66,16 @@ const filterButtonStyles = cva(
         false: ["bg-white/10", "text-white/70", "hover:bg-white/20"],
       },
     },
-  }
+  },
 );
 
-const EntityPicker = ({ isOpen, onClose, onSelect, targetRow, targetCol }: Props) => {
+const EntityPicker = ({
+  isOpen,
+  onClose,
+  onSelect,
+  targetRow,
+  targetCol,
+}: Props) => {
   const [search, setSearch] = useState("");
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
 
@@ -95,7 +110,7 @@ const EntityPicker = ({ isOpen, onClose, onSelect, targetRow, targetCol }: Props
       filtered = filtered.filter(
         (e) =>
           e.friendly_name.toLowerCase().includes(searchLower) ||
-          e.entity_id.toLowerCase().includes(searchLower)
+          e.entity_id.toLowerCase().includes(searchLower),
       );
     }
 
@@ -150,21 +165,27 @@ const EntityPicker = ({ isOpen, onClose, onSelect, targetRow, targetCol }: Props
         </div>
 
         {/* Domain filters */}
-        <div className="px-4 py-3 border-b border-white/10 overflow-x-auto">
+        <div className="px-4 py-3 flex-shrink-0 border-b border-white/10 overflow-x-auto">
           <div className="flex gap-2 min-w-max">
             <button
               onClick={() => setSelectedDomain(null)}
-              className={cx(filterButtonStyles({ active: selectedDomain === null }))}
+              className={cx(
+                filterButtonStyles({ active: selectedDomain === null }),
+              )}
             >
               All ({availableEntities.length})
             </button>
             {domains.map((domain) => {
-              const count = availableEntities.filter((e) => e.domain === domain).length;
+              const count = availableEntities.filter(
+                (e) => e.domain === domain,
+              ).length;
               return (
                 <button
                   key={domain}
                   onClick={() => setSelectedDomain(domain)}
-                  className={cx(filterButtonStyles({ active: selectedDomain === domain }))}
+                  className={cx(
+                    filterButtonStyles({ active: selectedDomain === domain }),
+                  )}
                 >
                   {domainLabels[domain] || domain} ({count})
                 </button>
