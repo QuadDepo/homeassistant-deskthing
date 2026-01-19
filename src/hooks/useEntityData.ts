@@ -3,19 +3,12 @@ import { SocketData } from "@deskthing/types";
 import DeskThing from "../Deskthing";
 import { useEntityStore } from "../stores/entityStore";
 import type { HassEntities } from "home-assistant-js-websocket";
+import type { LayoutConfig, LayoutItem } from "../../shared";
 
-type RawLayoutConfig = {
-  version: 1;
-  grid: { rows: number; cols: number };
-  items: Array<{
-    entityId: string;
-    enabled?: boolean;
-    position?: { row: number; col: number };
-    size?: { rowSpan: number; colSpan: number };
-  }>;
-};
+type RawLayoutItem = Omit<LayoutItem, "enabled"> & { enabled?: boolean };
+type RawLayoutConfig = Omit<LayoutConfig, "items"> & { items: RawLayoutItem[] };
 
-const transformLayout = (rawLayout: RawLayoutConfig) => ({
+const transformLayout = (rawLayout: RawLayoutConfig): LayoutConfig => ({
   ...rawLayout,
   items: rawLayout.items.map((item) => ({
     ...item,
@@ -38,7 +31,7 @@ export const useEntityData = (isConnected: boolean) => {
         console.log(
           "[HA Client] Received",
           Object.keys(entities).length,
-          "entities"
+          "entities",
         );
         updateEntities(entities);
       }
@@ -48,11 +41,13 @@ export const useEntityData = (isConnected: boolean) => {
       const rawLayout = data.payload as RawLayoutConfig | undefined;
       if (rawLayout) {
         const layout = transformLayout(rawLayout);
-        const positionedItems = layout.items.filter((item) => item.position).length;
+        const positionedItems = layout.items.filter(
+          (item) => item.position,
+        ).length;
         console.log(
           "[HA Client] Received layout config:",
           `${layout.grid?.rows || 3}x${layout.grid?.cols || 5} grid,`,
-          `${positionedItems} positioned items`
+          `${positionedItems} positioned items`,
         );
         updateLayout(layout);
       }
