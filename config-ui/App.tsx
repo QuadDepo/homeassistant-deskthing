@@ -1,14 +1,19 @@
 import { useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useConfigStore, useGridEntityCount } from "./stores/configStore";
 import GridEditor from "./components/GridEditor";
 
 const App = () => {
   const loadData = useConfigStore((state) => state.loadData);
   const saveLayout = useConfigStore((state) => state.saveLayout);
-  const isLoading = useConfigStore((state) => state.isLoading);
-  const isSaving = useConfigStore((state) => state.isSaving);
-  const isDirty = useConfigStore((state) => state.isDirty);
-  const error = useConfigStore((state) => state.error);
+  const { isLoading, isSaving, isDirty, error } = useConfigStore(
+    useShallow((state) => ({
+      isLoading: state.isLoading,
+      isSaving: state.isSaving,
+      isDirty: state.isDirty,
+      error: state.error,
+    }))
+  );
   const gridEntityCount = useGridEntityCount();
 
   useEffect(() => {
