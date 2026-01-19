@@ -1,5 +1,5 @@
 import { memo, useCallback } from "react";
-import { useDraggable } from "@dnd-kit/core";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { cx } from "class-variance-authority";
 import Icon from "@mdi/react";
 import { mdiClose, mdiArrowTopLeftBottomRightBold } from "@mdi/js";
@@ -26,11 +26,28 @@ const EntityCell = memo(function EntityCell({
   isResizing,
 }: EntityCellProps) {
   const id = `${row}-${col}`;
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id,
+
+  // Make this cell both draggable AND droppable
+  // This allows dropping on cells occupied by the entity being dragged (e.g., moving a 2x2 one column over)
+  const { attributes, listeners, setNodeRef: setDraggableRef, isDragging } = useDraggable({
+    id: `draggable-${id}`,
     data: { row, col, entity },
     disabled: isResizing,
   });
+
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+    id: `droppable-${id}`,
+    data: { row, col },
+  });
+
+  // Combine refs for both draggable and droppable
+  const setNodeRef = useCallback(
+    (node: HTMLElement | null) => {
+      setDraggableRef(node);
+      setDroppableRef(node);
+    },
+    [setDraggableRef, setDroppableRef]
+  );
 
   const iconPath = domainIcons[entity.domain] || defaultIcon;
   const size = entity.size || DEFAULT_SIZE;
@@ -64,7 +81,7 @@ const EntityCell = memo(function EntityCell({
       {...listeners}
       {...attributes}
       style={spanStyle}
-      className={cx(cellStyles({ isEmpty: false, isDragging, isResizing }))}
+      className={cx(cellStyles({ isEmpty: false, isDragging, isResizing, isOver }))}
     >
       {/* Remove button */}
       <button

@@ -7,6 +7,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { DEFAULT_SIZE } from "../../../shared/types/grid";
+import { createGridCollisionDetection } from "../../utils/gridCollisionDetection";
 import type { GridPosition } from "../../../shared/types/grid";
 import {
   useConfigStore,
@@ -61,6 +62,11 @@ const GridEditor = () => {
     }),
   );
 
+  const collisionDetection = useMemo(
+    () => createGridCollisionDetection(gridRef, gridConfig),
+    [gridConfig]
+  );
+
   const pickerRef = useRef<EntityPickerRef>(null);
 
   const handleAddClick = useCallback((row: number, col: number) => {
@@ -105,6 +111,7 @@ const GridEditor = () => {
       {/* Grid with DnD context */}
       <DndContext
         sensors={sensors}
+        collisionDetection={collisionDetection}
         onDragStart={dragHandlers.onDragStart}
         onDragOver={dragHandlers.onDragOver}
         onDragEnd={dragHandlers.onDragEnd}
