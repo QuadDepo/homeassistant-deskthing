@@ -7,28 +7,35 @@ import type {
 
 const API_BASE = "/api";
 
-export async function fetchEntities(): Promise<EntitiesResponse> {
-  const response = await fetch(`${API_BASE}/entities`);
+async function handleResponse<T>(response: Response, operation: string): Promise<T> {
   if (!response.ok) {
-    throw new Error("Failed to fetch entities");
+    let errorMessage = `${operation} failed: ${response.status} ${response.statusText}`;
+    try {
+      const errorBody = await response.json();
+      if (errorBody.error) {
+        errorMessage += ` - ${errorBody.error}`;
+      }
+    } catch {
+      // If response body is not JSON or empty, use default message
+    }
+    throw new Error(errorMessage);
   }
   return response.json();
+}
+
+export async function fetchEntities(): Promise<EntitiesResponse> {
+  const response = await fetch(`${API_BASE}/entities`);
+  return handleResponse(response, "Fetch entities");
 }
 
 export async function fetchSelectedEntities(): Promise<{ selectedEntityIds: string[] }> {
   const response = await fetch(`${API_BASE}/selected-entities`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch selected entities");
-  }
-  return response.json();
+  return handleResponse(response, "Fetch selected entities");
 }
 
 export async function fetchLayout(): Promise<LayoutResponse> {
   const response = await fetch(`${API_BASE}/layout`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch layout");
-  }
-  return response.json();
+  return handleResponse(response, "Fetch layout");
 }
 
 export async function saveLayout(layout: LayoutConfig): Promise<{ success: boolean }> {
@@ -39,16 +46,10 @@ export async function saveLayout(layout: LayoutConfig): Promise<{ success: boole
     },
     body: JSON.stringify({ layout }),
   });
-  if (!response.ok) {
-    throw new Error("Failed to save layout");
-  }
-  return response.json();
+  return handleResponse(response, "Save layout");
 }
 
 export async function fetchStatus(): Promise<StatusResponse> {
   const response = await fetch(`${API_BASE}/status`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch status");
-  }
-  return response.json();
+  return handleResponse(response, "Fetch status");
 }
