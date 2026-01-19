@@ -217,26 +217,10 @@ export interface EntityWithLayout extends EntityInfo {
 }
 
 // Get entity at a specific grid position
+// Uses useGridEntities internally to avoid rebuilding the entity map on each call
 export const useEntityAtPosition = (row: number, col: number): EntityWithLayout | null => {
-  const allEntities = useConfigStore((state) => state.allEntities);
-  const layout = useConfigStore((state) => state.layout);
-
-  const entityMap = new Map(allEntities.map((e) => [e.entity_id, e]));
-
-  const item = layout.items.find(
-    (item) => item.position?.row === row && item.position?.col === col
-  );
-
-  if (!item) return null;
-
-  const entity = entityMap.get(item.entityId);
-  if (!entity) return null;
-
-  return {
-    ...entity,
-    enabled: item.enabled,
-    position: item.position,
-  };
+  const gridEntities = useGridEntities();
+  return gridEntities.get(positionKey(row, col)) || null;
 };
 
 // Get all entities that are placed on the grid
